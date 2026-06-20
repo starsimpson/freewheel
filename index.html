@@ -266,11 +266,15 @@ function side(v, w, d, x, sign){
 function compute(v){
   const L = side(v, v.wL, v.dL, v.xL, -1);
   const Rt = side(v, v.wR, v.dR, v.xR, +1);
-  // tension distribution from bracing angles (shallower side = higher tension)
-  const tL = Math.tan(L.brace*D2R), tR = Math.tan(Rt.brace*D2R);
-  const sum = tL + tR;
-  L.tens = sum>0 ? 100*tR/sum : 50;   // inverse: small angle -> larger share
-  Rt.tens = sum>0 ? 100*tL/sum : 50;
+  // Tension balance: for the wheel to sit centered the lateral force components
+  // must cancel, so T*sin(bracing) is equal on both sides -> tension is inversely
+  // proportional to sin(bracing). Express each side relative to the higher-tension
+  // (tighter) side, which is pinned at 100%; the shallower-braced side is highest.
+  const sL = Math.max(1e-4, Math.sin(L.brace*D2R));
+  const sR = Math.max(1e-4, Math.sin(Rt.brace*D2R));
+  const invL = 1/sL, invR = 1/sR, mx = Math.max(invL, invR);
+  L.tens = 100*invL/mx;
+  Rt.tens = 100*invR/mx;
   return {L,R:Rt};
 }
 
