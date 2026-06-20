@@ -9,7 +9,3 @@ services:
       - path: /*
         name: Cache-Control
         value: "public, max-age=0, must-revalidate"
-    routes:
-      - type: rewrite
-        source: /
-        destination: /index.html
