@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: freewheel
+    runtime: static
+    buildCommand: "echo no build step required"
+    staticPublishPath: .
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: "public, max-age=0, must-revalidate"
+    routes:
+      - type: rewrite
+        source: /
+        destination: /index.html

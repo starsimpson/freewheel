@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Spokes — a clear bicycle spoke length calculator</title>
+<meta name="description" content="A bicycle spoke length calculator with crisp, to-scale diagrams of the wheel dish and the spoke lacing, so you can visually verify the build before you cut."/>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#1a1a1a;
+    --line:#222;
+    --muted:#6b7280;
+    --rule:#d9d9d9;
+    --accent:#1f4fd6;
+    --accentbg:#eef3ff;
+    --spoke:#1f4fd6;
+    --far:#bcbcbc;
+    --warn:#c81e1e;
+    --ok:#0a7d33;
+    --field:#fafafa;
+    --mono:"SFMono-Regular",ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{padding:22px 20px 8px; max-width:1180px; margin:0 auto}
+  header h1{font-size:24px; margin:0 0 2px; letter-spacing:-.01em}
+  header p{margin:0; color:var(--muted); font-size:14px}
+  header a{color:var(--accent); text-decoration:none}
+  header a:hover{text-decoration:underline}
+  main{max-width:1180px; margin:0 auto; padding:8px 20px 60px;
+    display:grid; grid-template-columns: 360px 1fr; gap:28px; align-items:start}
+  @media (max-width:880px){ main{grid-template-columns:1fr} }
+
+  .panel{border:1px solid var(--rule); border-radius:10px; padding:16px}
+  .panel h2{font-size:12px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--muted); margin:0 0 12px; font-weight:600}
+  .panel + .panel{margin-top:16px}
+
+  .grid{display:grid; grid-template-columns:1fr auto auto; gap:8px 10px; align-items:center}
+  .grid .lab{font-size:13px}
+  .grid .lab small{display:block; color:var(--muted); font-size:11px; line-height:1.2}
+  .grid .single{grid-column:2 / 4}
+  input[type=number], select{
+    width:74px; font:13px var(--mono); text-align:right;
+    padding:6px 7px; border:1px solid var(--rule); border-radius:6px;
+    background:var(--field); color:var(--ink);
+  }
+  select{text-align:left; width:158px}
+  input:focus, select:focus{outline:2px solid var(--accentbg); border-color:var(--accent)}
+  .colhdr{display:grid; grid-template-columns:1fr 74px 74px; gap:10px; margin-bottom:6px}
+  .colhdr span{font-size:11px; color:var(--muted); text-align:center; font-weight:600}
+  .colhdr span:first-child{text-align:left}
+
+  /* results */
+  .results{width:100%; border-collapse:collapse; font-size:13px}
+  .results th,.results td{padding:6px 8px; border-bottom:1px solid var(--rule); text-align:right}
+  .results th:first-child,.results td:first-child{text-align:left; color:var(--muted)}
+  .results thead th{color:var(--ink); font-size:11px; text-transform:uppercase; letter-spacing:.06em}
+  .results tr.big td{font-family:var(--mono); font-size:20px; padding:10px 8px}
+  .results tr.big td:first-child{font-family:inherit; font-size:13px}
+  .results tr.big td small{display:block; font:400 11px/1.3 var(--mono); color:var(--muted); margin-top:3px}
+  .results .val{font-family:var(--mono)}
+  .warn{color:var(--warn); font-weight:600}
+  .ok{color:var(--ok)}
+  .hint{font-size:11px; color:var(--muted); margin:8px 2px 0}
+
+  /* diagrams */
+  .diagrams{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px}
+  @media (max-width:1080px){ .diagrams{grid-template-columns:1fr 1fr} }
+  @media (max-width:560px){ .diagrams{grid-template-columns:1fr} }
+  figure{margin:0; border:1px solid var(--rule); border-radius:10px; overflow:hidden; background:#fff}
+  figcaption{font-size:12px; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--rule);
+    display:flex; justify-content:space-between; align-items:center}
+  figcaption b{color:var(--ink); font-weight:600}
+  svg{display:block; width:100%; height:auto; background:#fff}
+  .dethead{font-size:11px; color:var(--muted); padding:6px 10px; border-top:1px solid var(--rule); text-align:center}
+  svg text{font-family:var(--mono); fill:var(--ink)}
+  svg text.halo{paint-order:stroke; stroke:#fff; stroke-width:3px; stroke-linejoin:round}
+  .toggle{display:flex; gap:6px; margin:10px 0 0}
+  .toggle button{font:12px var(--mono); padding:4px 10px; border:1px solid var(--rule);
+    background:#fff; border-radius:6px; cursor:pointer}
+  .toggle button.on{background:var(--accent); color:#fff; border-color:var(--accent)}
+  .foot{max-width:1180px; margin:0 auto; padding:0 20px 40px; color:var(--muted); font-size:12px}
+  .foot code{font-family:var(--mono); background:#f3f3f3; padding:1px 5px; border-radius:4px}
+  details{margin-top:8px}
+  summary{cursor:pointer; color:var(--accent); font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Spokes</h1>
+  <p>A bicycle spoke length calculator with crisp, to-scale diagrams — verify the dish and the lacing before you cut. In the spirit of the late, great <i>Freespoke</i>.</p>
+</header>
+
+<main>
+  <!-- ============ INPUTS ============ -->
+  <section>
+    <div class="panel">
+      <h2>Rim</h2>
+      <div class="colhdr"><span>&nbsp;</span><span>Left</span><span>Right</span></div>
+      <div class="grid">
+        <div class="lab">ERD <small>effective rim diameter, mm</small></div>
+        <input id="erd" class="single" type="number" step="0.1" value="602.3" style="width:158px">
+        <div class="lab">Drilling offset <small>+ moves L nipple left / R nipple right</small></div>
+        <input id="oL" type="number" step="0.1" value="0">
+        <input id="oR" type="number" step="0.1" value="0">
+        <div class="lab">Spoke hole dia <small>at rim/nipple seat, mm</small></div>
+        <input id="sd" class="single" type="number" step="0.1" value="2.6" style="width:158px">
+        <div class="lab">Spoke gauge <small>wire / elbow dia, mm</small></div>
+        <input id="sg" class="single" type="number" step="0.1" value="2.0" style="width:158px">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Hub</h2>
+      <div class="colhdr"><span>&nbsp;</span><span>Left</span><span>Right</span></div>
+      <div class="grid">
+        <div class="lab">Center-to-flange <small>hub center → flange, mm</small></div>
+        <input id="wL" type="number" step="0.1" value="36">
+        <input id="wR" type="number" step="0.1" value="18">
+        <div class="lab">Flange PCD <small>spoke-hole circle dia, mm</small></div>
+        <input id="dL" type="number" step="0.1" value="40.5">
+        <input id="dR" type="number" step="0.1" value="55">
+        <div class="lab">Flange thickness <small>at the spoke holes, mm</small></div>
+        <input id="ft" class="single" type="number" step="0.1" value="2.6" style="width:158px">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Build</h2>
+      <div class="colhdr"><span>&nbsp;</span><span>Left</span><span>Right</span></div>
+      <div class="grid">
+        <div class="lab"># Spokes <small>total holes</small></div>
+        <select id="n" class="single">
+          <option>16</option><option>20</option><option>24</option><option>28</option>
+          <option selected>32</option><option>36</option><option>40</option><option>48</option>
+        </select>
+        <div class="lab">Cross pattern <small>crossings per side</small></div>
+        <input id="xL" type="number" step="1" min="0" value="0">
+        <input id="xR" type="number" step="1" min="0" value="3">
+        <div class="lab">Hub offset <small>+ shifts whole hub right (fatbike)</small></div>
+        <input id="ho" class="single" type="number" step="0.1" value="0" style="width:158px">
+      </div>
+      <p class="hint">Edits recalculate instantly. <a href="#" id="permalink">Copy a shareable link →</a></p>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS + DIAGRAMS ============ -->
+  <section>
+    <div class="panel" style="margin-bottom:16px">
+      <h2>Results</h2>
+      <table class="results">
+        <thead><tr><th></th><th>Left</th><th>Right</th></tr></thead>
+        <tbody>
+          <tr class="big"><td>Spoke length</td><td id="r_len_L"></td><td id="r_len_R"></td></tr>
+          <tr><td>Spoke head clearance</td><td id="r_clr_L"></td><td id="r_clr_R"></td></tr>
+          <tr><td>Bracing angle</td><td id="r_brace_L"></td><td id="r_brace_R"></td></tr>
+          <tr><td>Tension distribution</td><td id="r_tens_L"></td><td id="r_tens_R"></td></tr>
+          <tr><td>Flange exit angle</td><td id="r_exit_L"></td><td id="r_exit_R"></td></tr>
+          <tr><td>Effective tangential PCD</td><td id="r_etpcd_L"></td><td id="r_etpcd_R"></td></tr>
+          <tr><td>Wrap angle (at rim)</td><td id="r_wrap_L"></td><td id="r_wrap_R"></td></tr>
+          <tr><td>Theta angle (hub→rim)</td><td id="r_theta_L"></td><td id="r_theta_R"></td></tr>
+        </tbody>
+      </table>
+      <p class="hint">The <b>order</b> line under each length rounds to the nearest mm (and the nearest even length, since many spokes are stocked in 2&nbsp;mm steps); when in doubt, don't round <i>up</i> past the rim. <b>Head clearance</b> is the 3-D gap from a spoke to its crossing neighbour's elbow, using your flange thickness and spoke gauge — below ~1&nbsp;mm (shown in red) the heads may foul, so try one cross less.</p>
+    </div>
+
+    <div class="diagrams">
+      <figure>
+        <figcaption><b>Dish</b><span>cross-section, to scale</span></figcaption>
+        <svg id="svgDish" viewBox="0 0 320 760" preserveAspectRatio="xMidYMid meet"></svg>
+      </figure>
+      <figure>
+        <figcaption><b>Lacing — Left</b><span id="lacLcap"></span></figcaption>
+        <svg id="svgLacL" viewBox="0 0 320 330" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="dethead">Hub detail — heads &amp; clearance</div>
+        <svg id="svgDetL" viewBox="0 0 320 300" preserveAspectRatio="xMidYMid meet"></svg>
+      </figure>
+      <figure>
+        <figcaption><b>Lacing — Right</b><span id="lacRcap"></span></figcaption>
+        <svg id="svgLacR" viewBox="0 0 320 330" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="dethead">Hub detail — heads &amp; clearance</div>
+        <svg id="svgDetR" viewBox="0 0 320 300" preserveAspectRatio="xMidYMid meet"></svg>
+      </figure>
+    </div>
+  </section>
+</main>
+
+<div class="foot">
+  <details>
+    <summary>The math (and what each number means)</summary>
+    <p style="max-width:760px">
+    Spoke length uses the standard 3-D triangle:
+    <code>L = √(R² + r² + f² − 2·R·r·cos θ) − ½·(spoke hole dia)</code>,
+    where <code>R = ERD/2</code>, <code>r = flange PCD/2</code>, <code>f</code> is the axial
+    center-to-flange distance (adjusted by hub offset and drilling offset), and
+    <code>θ = crosses × 720 / spoke-count</code> is the angle subtended at the axle between a
+    hub hole and its rim hole. <b>Bracing angle</b> = atan(f / in-plane run): a bigger angle
+    braces the wheel better laterally. <b>Tension distribution</b> compares the two bracing
+    angles — the shallower (usually drive) side carries the higher tension. <b>Effective
+    tangential PCD</b> is the circle the spokes run tangent to; <b>flange exit</b> and
+    <b>wrap</b> are how far off radial the spoke leaves the hub and meets the rim. <b>Spoke
+    head clearance</b> is modelled as the 3-D distance between a spoke and the elbow of its
+    immediate crossing neighbour:
+    <code>clearance = √(gap² + flange_thickness²) − spoke_gauge</code>, where <code>gap</code> is
+    the in-plane perpendicular distance from the neighbour hole to the spoke line. Because
+    adjacent heads sit on opposite faces of the flange, thickness genuinely buys room — the
+    hub-detail diagram lets you see it directly.</p>
+  </details>
+  <p>No data leaves your browser. Built as a single static page; calculations in JavaScript. © 2026.</p>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+const SVGNS = "http://www.w3.org/2000/svg";
+
+const FIELDS = ["erd","oL","oR","sd","sg","wL","wR","dL","dR","ft","n","xL","xR","ho"];
+
+// ---- read inputs ----
+function read(){
+  const v = {};
+  for(const f of FIELDS) v[f] = parseFloat($(f).value) || 0;
+  v.n = Math.max(8, Math.round(v.n));
+  return v;
+}
+
+// ---- core spoke geometry for one side ----
+// w: center-to-flange, d: flange PCD, x: crosses, sign: -1 left / +1 right
+function side(v, w, d, x, sign){
+  const R = v.erd/2;                 // rim spoke-bed radius
+  const r = d/2;                     // flange spoke-hole radius
+  const theta = x * 720 / v.n;       // deg subtended at axle
+  const th = theta*D2R;
+  // axial distance flange→nipple. Hub offset shifts hub toward +(right);
+  // drilling offset moves this side's nipple outward (away from center).
+  const o = (sign<0) ? v.oL : v.oR;
+  const f = Math.abs(w + sign*v.ho + o);   // +o lengthens the axial run
+  const inPlane = Math.sqrt(R*R + r*r - 2*R*r*Math.cos(th)); // chord in wheel plane
+  const len = Math.sqrt(inPlane*inPlane + f*f) - v.sd/2;
+  const brace = Math.atan2(f, inPlane)*R2D;
+  // perpendicular distance from axle to the spoke line = effective tangential radius
+  const tang = (inPlane>0) ? (R*r*Math.sin(th))/inPlane : 0;
+  const exit = Math.asin(Math.min(1, tang/r))*R2D;    // off-radial at hub
+  const wrap = Math.asin(Math.min(1, tang/R))*R2D;     // off-radial at rim
+  // ---- spoke head clearance ----------------------------------------------
+  // The binding interference is between this spoke's body and the head/elbow of
+  // its immediate crossing neighbour (one hole over). That neighbour heads the
+  // opposite way and its head sits on the OPPOSITE face of the flange, so the
+  // true gap is the 3-D distance: the in-plane perpendicular gap combined with
+  // the flange thickness, less the elbow keep-out (~one spoke gauge).
+  const phi = (720/v.n)*D2R;          // angular hole spacing on the flange
+  const p = tang;                      // perpendicular dist. axle -> spoke line
+  const gap = p*(Math.cos(phi)-1) + Math.sqrt(Math.max(0,r*r-p*p))*Math.sin(phi);
+  const t = v.ft, hr = v.sg;           // flange thickness, elbow keep-out radius
+  const clr = Math.sqrt(gap*gap + t*t) - hr;
+  return {R,r,theta,th,f,inPlane,len,brace,tang,exit,wrap,gap,clr,x};
+}
+
+function compute(v){
+  const L = side(v, v.wL, v.dL, v.xL, -1);
+  const Rt = side(v, v.wR, v.dR, v.xR, +1);
+  // tension distribution from bracing angles (shallower side = higher tension)
+  const tL = Math.tan(L.brace*D2R), tR = Math.tan(Rt.brace*D2R);
+  const sum = tL + tR;
+  L.tens = sum>0 ? 100*tR/sum : 50;   // inverse: small angle -> larger share
+  Rt.tens = sum>0 ? 100*tL/sum : 50;
+  return {L,R:Rt};
+}
+
+// ---- formatting / results table ----
+function fmt(x,dp=1){ return (x).toFixed(dp); }
+function setText(id,txt,cls){ const e=$(id); e.textContent=txt; e.className = (cls||"")+" "+(e.classList.contains('val')?'':''); if(cls) e.classList.add(cls); else e.classList.remove('warn','ok'); }
+
+// nearest practical spoke length(s) to order/cut
+function roundText(len){
+  const mm = Math.round(len), even = Math.round(len/2)*2;
+  return (mm===even) ? `order ${mm} mm` : `order ${mm} mm · ${even} if even-only`;
+}
+
+function renderResults(c){
+  const put=(id,t,cls)=>{const e=$(id); e.textContent=t; e.classList.remove('warn','ok'); if(cls)e.classList.add(cls);};
+  const putLen=(id,len)=>{$(id).innerHTML = `${fmt(len,1)}<small>${roundText(len)}</small>`;};
+  putLen('r_len_L', c.L.len);  putLen('r_len_R', c.R.len);
+  const clrCls = v => v < 1.0 ? 'warn' : 'ok';
+  put('r_clr_L', fmt(c.L.clr,1)+' mm', clrCls(c.L.clr));
+  put('r_clr_R', fmt(c.R.clr,1)+' mm', clrCls(c.R.clr));
+  put('r_brace_L', fmt(c.L.brace,1)+'°'); put('r_brace_R', fmt(c.R.brace,1)+'°');
+  put('r_tens_L', Math.round(c.L.tens)+'%'); put('r_tens_R', Math.round(c.R.tens)+'%');
+  put('r_exit_L', fmt(c.L.exit,1)+'°'); put('r_exit_R', fmt(c.R.exit,1)+'°');
+  put('r_etpcd_L', fmt(2*c.L.tang,1)); put('r_etpcd_R', fmt(2*c.R.tang,1));
+  put('r_wrap_L', fmt(c.L.wrap,1)+'°'); put('r_wrap_R', fmt(c.R.wrap,1)+'°');
+  put('r_theta_L', fmt(c.L.theta,1)+'°'); put('r_theta_R', fmt(c.R.theta,1)+'°');
+}
+
+// ---- tiny SVG helpers ----
+function el(name, attrs){
+  const e=document.createElementNS(SVGNS,name);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function line(p,x1,y1,x2,y2,attr){ p.appendChild(el('line',{x1,y1,x2,y2,...attr})); }
+function txt(p,x,y,s,attr){ const t=el('text',{x,y,...attr}); t.textContent=s; p.appendChild(t); }
+function clear(svg){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+
+// =========================================================
+//  DISH (cross-section) — to scale. Vertical = radius, horizontal = axial.
+// =========================================================
+function drawDish(v,c){
+  const svg=$('svgDish'); clear(svg);
+  const W=320,H=760, cx=W/2;
+  const topPad=70, botPad=40;
+  const R=v.erd/2;
+  const s = (H-topPad-botPad)/R;          // px per mm (radius)
+  const yR = topPad;                       // rim spoke bed (radius R) at top
+  const yHub = H-botPad;                   // axle centerline at bottom (radius 0)
+  const rad2y = rr => yHub - rr*s;
+  const ax2x  = aa => cx + aa*s;           // axial mm -> x (same scale, true dish)
+
+  // centerline + axle line
+  line(svg, cx,28, cx,H-20, {stroke:'#bbb','stroke-width':1,'stroke-dasharray':'3 4'});
+  line(svg, 20,yHub, W-20,yHub, {stroke:'#bbb','stroke-width':1});
+  txt(svg, 24, yHub-5, 'axle', {'font-size':10, fill:'#888'});
+
+  // rim spoke-bed line + label
+  line(svg, 20,yR, W-20,yR, {stroke:'#ddd','stroke-width':1});
+  txt(svg, 24, yR-6, 'ERD '+fmt(v.erd,1), {'font-size':10, fill:'#888'});
+
+  // rim profile (schematic box) centered on axial 0
+  const rw=26*s/ (R>250?1.0:1.0); // visual width approx; keep modest
+  const halfRim = 11;             // mm half-width of the rim drawn
+  const rimTop = rad2y(R+9), rimBot = rad2y(R);
+  svg.appendChild(el('path',{d:
+    `M ${ax2x(-halfRim)} ${rimBot} L ${ax2x(-halfRim)} ${rimTop} `+
+    `L ${ax2x(halfRim)} ${rimTop} L ${ax2x(halfRim)} ${rimBot} `+
+    `M ${ax2x(-halfRim)} ${rimBot} L ${ax2x(halfRim)} ${rimBot}`,
+    fill:'none', stroke:'#333','stroke-width':1.4}));
+
+  // flange axial positions relative to rim center plane
+  const aL = -(v.wL) + v.ho;   // left flange axial
+  const aR =  (v.wR) + v.ho;   // right flange axial
+  const rL = v.dL/2, rR = v.dR/2;
+  // nipple axial (drilling offset moves nipple outward from center)
+  const nL = -v.oL, nR = v.oR;
+
+  // spokes (blue), one per side, drawn from nipple at rim down to flange top hole
+  const drawSpoke=(ax,rr,nx)=>{
+    line(svg, ax2x(nx),rad2y(R), ax2x(ax),rad2y(rr), {stroke:'var(--spoke)','stroke-width':1.4});
+    // little nipple tick
+    line(svg, ax2x(nx),rad2y(R), ax2x(nx),rad2y(R)+5, {stroke:'var(--spoke)','stroke-width':1.4});
+  };
+  drawSpoke(aL,rL,nL);
+  drawSpoke(aR,rR,nR);
+
+  // hub body: axle + two flanges, schematic, to scale axially
+  const bodyTop = rad2y(7), bodyBot = rad2y(-7); // axle ±7mm
+  const lockL = ax2x(-(v.wL+8)), lockR = ax2x(v.wR+8);
+  svg.appendChild(el('rect',{x:ax2x(aL)-1, y:rad2y(rL), width:2, height:rad2y(2)-rad2y(rL), fill:'#333'})); // L flange stub up
+  svg.appendChild(el('rect',{x:ax2x(aR)-1, y:rad2y(rR), width:2, height:rad2y(2)-rad2y(rR), fill:'#333'}));
+  // axle barrel
+  svg.appendChild(el('rect',{x:lockL, y:bodyTop, width:lockR-lockL, height:bodyBot-bodyTop,
+     fill:'#f0f0f0', stroke:'#333','stroke-width':1}));
+  // flanges as tall thin rectangles
+  const fY0=rad2y(rL), fY1=rad2y(-rL);
+  svg.appendChild(el('rect',{x:ax2x(aL)-2.5, y:rad2y(rL), width:5, height:rad2y(-rL)-rad2y(rL),
+     fill:'#ddd', stroke:'#333','stroke-width':1}));
+  svg.appendChild(el('rect',{x:ax2x(aR)-2.5, y:rad2y(rR), width:5, height:rad2y(-rR)-rad2y(rR),
+     fill:'#ddd', stroke:'#333','stroke-width':1}));
+
+  // side labels + bracing angles, placed above the flange tops (no overlap)
+  txt(svg, ax2x(aL), rad2y(rL)-16, 'left', {'font-size':9, fill:'#999','text-anchor':'middle', class:'halo'});
+  txt(svg, ax2x(aR), rad2y(rR)-16, 'right', {'font-size':9, fill:'#999','text-anchor':'middle', class:'halo'});
+  txt(svg, ax2x(aL), rad2y(rL)-5, c.L.brace.toFixed(1)+'°', {'font-size':10, fill:'var(--spoke)','text-anchor':'middle', class:'halo'});
+  txt(svg, ax2x(aR), rad2y(rR)-5, c.R.brace.toFixed(1)+'°', {'font-size':10, fill:'var(--spoke)','text-anchor':'middle', class:'halo'});
+}
+
+// =========================================================
+//  LACING — full face-on overview of one flange (crossing pattern + rim).
+// =========================================================
+function drawLacing(svgId, capId, v, sd, sideName){
+  const svg=$(svgId); clear(svg);
+  $(capId).textContent = (sd.x===0?'radial':sd.x+'-cross')+' · '+(v.n/2)+' spokes';
+  const W=320,H=330, cx=W/2, cy=H/2+8;
+  const R=v.erd/2, r=sd.r;
+  const RR=(Math.min(W,H)/2 - 16);          // fit rim to box
+  const s=RR/R, rr=r*s;
+  const half=v.n/2, holeStep=360/half, theta=sd.theta;
+
+  svg.appendChild(el('circle',{cx,cy,r:RR, fill:'none', stroke:'#e3e3e3','stroke-width':1}));
+  svg.appendChild(el('circle',{cx,cy,r:rr+5*s+2, fill:'#f4f4f4', stroke:'#bbb','stroke-width':1}));
+  svg.appendChild(el('circle',{cx,cy,r:3, fill:'#222'}));
+
+  function spokes(color,wdt,phase){
+    for(let i=0;i<half;i++){
+      const aHub=(i*holeStep+phase)*D2R;
+      const dir=(i%2===0)?1:-1;
+      const aRim=aHub + dir*theta*D2R;
+      line(svg, cx+r*Math.cos(aHub)*s, cy-r*Math.sin(aHub)*s,
+                cx+R*Math.cos(aRim)*s, cy-R*Math.sin(aRim)*s, {stroke:color,'stroke-width':wdt});
+    }
+  }
+  spokes('var(--far)',1, holeStep/2);   // far flange, context
+  spokes('#111',1.4, 0);                 // near flange
+  for(let i=0;i<half;i++){
+    const a=i*holeStep*D2R;
+    svg.appendChild(el('circle',{cx:cx+r*Math.cos(a)*s,cy:cy-r*Math.sin(a)*s,r:2, fill:'#111'}));
+  }
+  txt(svg, cx, 16, sideName, {'font-size':12,'text-anchor':'middle', fill:'#444'});
+}
+
+// =========================================================
+//  HUB DETAIL — zoomed view of the flange so you can SEE spoke heads clear.
+//  Heads alternate in/out of the flange; a spoke must miss its neighbour's head.
+// =========================================================
+function drawHubDetail(svgId, v, sd){
+  const svg=$(svgId); clear(svg);
+  const W=320,H=300, cx=W/2, cy=H/2+6;
+  const r=sd.r;
+  // zoom so the flange + first crossings fill the frame
+  const viewR = r*2.6;                       // mm shown from center to edge
+  const s=(Math.min(W,H)/2 - 14)/viewR;
+  const rr=r*s, headR=Math.max(3.0, v.sg*s);  // drawn head radius (~spoke elbow)
+  const half=v.n/2, holeStep=360/half, theta=sd.theta;
+  const R=v.erd/2;
+
+  // flange disc
+  svg.appendChild(el('circle',{cx,cy,r:rr+5*s, fill:'#f1f1f1', stroke:'#aaa','stroke-width':1}));
+  svg.appendChild(el('circle',{cx,cy,r:rr, fill:'none', stroke:'#bbb','stroke-width':1,'stroke-dasharray':'2 3'}));
+  svg.appendChild(el('circle',{cx,cy,r:3, fill:'#222'}));
+
+  // spoke bodies, clipped to the frame, plus heads at each hole.
+  // Heads alternate side of flange: even = "in" (drawn as ring), odd = "out" (filled).
+  for(let i=0;i<half;i++){
+    const aHub=i*holeStep*D2R;
+    const dir=(i%2===0)?1:-1;
+    const aRim=aHub + dir*theta*D2R;
+    const hx=cx+r*Math.cos(aHub)*s, hy=cy-r*Math.sin(aHub)*s;
+    // direction toward rim hole
+    const rx=cx+R*Math.cos(aRim)*s, ry=cy-R*Math.sin(aRim)*s;
+    const dx=rx-hx, dy=ry-hy, dl=Math.hypot(dx,dy);
+    const ext=Math.min(dl, (Math.min(W,H)));   // extend across the frame
+    line(svg, hx,hy, hx+dx/dl*ext, hy+dy/dl*ext, {stroke:'#111','stroke-width':1.6});
+  }
+  // heads on top (so they read clearly)
+  for(let i=0;i<half;i++){
+    const aHub=i*holeStep*D2R;
+    const hx=cx+r*Math.cos(aHub)*s, hy=cy-r*Math.sin(aHub)*s;
+    const headsIn=(i%2===0);
+    svg.appendChild(el('circle',{cx:hx,cy:hy,r:headR,
+      fill: headsIn ? '#fff' : '#d33',
+      stroke: headsIn ? '#d33' : '#a00', 'stroke-width':1.4}));
+  }
+
+  // clearance read-out + flag
+  const tight = sd.clr < 1.0;
+  txt(svg, cx, 16, 'head clearance '+sd.clr.toFixed(1)+' mm',
+      {'font-size':11,'text-anchor':'middle', class:'halo', fill: tight?'#c81e1e':'#0a7d33'});
+  txt(svg, cx, H-6, '● head out   ○ head in', {'font-size':9,'text-anchor':'middle', class:'halo', fill:'#999'});
+}
+
+// =========================================================
+//  Driver
+// =========================================================
+function recalc(){
+  const v=read();
+  const c=compute(v);
+  renderResults(c);
+  drawDish(v,c);
+  drawLacing('svgLacL','lacLcap', v, c.L, 'Left flange');
+  drawLacing('svgLacR','lacRcap', v, c.R, 'Right flange');
+  drawHubDetail('svgDetL', v, c.L);
+  drawHubDetail('svgDetR', v, c.R);
+}
+
+// permalink (state in URL hash)
+function syncToHash(){
+  const v=read(); const p=new URLSearchParams();
+  for(const f of FIELDS) p.set(f, $(f).value);
+  history.replaceState(null,'','#'+p.toString());
+}
+function loadFromHash(){
+  if(!location.hash) return;
+  const p=new URLSearchParams(location.hash.slice(1));
+  for(const f of FIELDS) if(p.has(f)) $(f).value=p.get(f);
+}
+
+for(const f of FIELDS){
+  $(f).addEventListener('input', ()=>{ recalc(); syncToHash(); });
+}
+$('permalink').addEventListener('click', e=>{
+  e.preventDefault(); syncToHash();
+  navigator.clipboard?.writeText(location.href);
+  e.target.textContent='Link copied!'; setTimeout(()=>e.target.textContent='Copy a shareable link →',1500);
+});
+
+loadFromHash();
+recalc();
+</script>
+</body>
+</html>
