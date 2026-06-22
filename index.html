@@ -109,8 +109,6 @@
         <div class="lab">Drilling offset <small>+ moves L nipple left / R nipple right</small></div>
         <input id="oL" type="number" step="0.1" value="0">
         <input id="oR" type="number" step="0.1" value="0">
-        <div class="lab">Spoke hole dia <small>at rim/nipple seat, mm</small></div>
-        <input id="sd" class="single" type="number" step="0.1" value="2.6" style="width:158px">
         <div class="lab">Spoke gauge <small>wire / elbow dia, mm</small></div>
         <input id="sg" class="single" type="number" step="0.1" value="2.0" style="width:158px">
       </div>
@@ -128,6 +126,8 @@
         <input id="dR" type="number" step="0.1" value="55">
         <div class="lab">Flange thickness <small>at the spoke holes, mm</small></div>
         <input id="ft" class="single" type="number" step="0.1" value="2.6" style="width:158px">
+        <div class="lab">Spoke-hole dia (flange) <small>hub drilling; ½ subtracted from length</small></div>
+        <input id="sd" class="single" type="number" step="0.1" value="2.6" style="width:158px">
       </div>
     </div>
 
@@ -140,9 +140,19 @@
           <option>16</option><option>20</option><option>24</option><option>28</option>
           <option selected>32</option><option>36</option><option>40</option><option>48</option>
         </select>
-        <div class="lab">Cross pattern <small>crossings per side</small></div>
-        <input id="xL" type="number" step="1" min="0" value="0">
-        <input id="xR" type="number" step="1" min="0" value="3">
+        <div class="lab">Lacing pattern <small>per side · CF = crow's foot</small></div>
+        <select id="xL" style="width:74px">
+          <option value="0">Radial</option><option value="1">1×</option>
+          <option value="2">2×</option><option value="3">3×</option>
+          <option value="4">4×</option><option value="5">5×</option>
+          <option value="cf2">CF2×</option><option value="cf3">CF3×</option>
+        </select>
+        <select id="xR" style="width:74px">
+          <option value="0">Radial</option><option value="1">1×</option>
+          <option value="2">2×</option><option value="3" selected>3×</option>
+          <option value="4">4×</option><option value="5">5×</option>
+          <option value="cf2">CF2×</option><option value="cf3">CF3×</option>
+        </select>
         <div class="lab">Hub offset <small>+ shifts whole hub right (fatbike)</small></div>
         <input id="ho" class="single" type="number" step="0.1" value="0" style="width:158px">
       </div>
@@ -157,17 +167,18 @@
       <table class="results">
         <thead><tr><th></th><th>Left</th><th>Right</th></tr></thead>
         <tbody>
-          <tr class="big"><td>Spoke length</td><td id="r_len_L"></td><td id="r_len_R"></td></tr>
-          <tr><td>Spoke head clearance</td><td id="r_clr_L"></td><td id="r_clr_R"></td></tr>
-          <tr><td>Bracing angle</td><td id="r_brace_L"></td><td id="r_brace_R"></td></tr>
-          <tr><td>Tension distribution</td><td id="r_tens_L"></td><td id="r_tens_R"></td></tr>
-          <tr><td>Flange exit angle</td><td id="r_exit_L"></td><td id="r_exit_R"></td></tr>
-          <tr><td>Effective tangential PCD</td><td id="r_etpcd_L"></td><td id="r_etpcd_R"></td></tr>
-          <tr><td>Wrap angle (at rim)</td><td id="r_wrap_L"></td><td id="r_wrap_R"></td></tr>
-          <tr><td>Theta angle (hub→rim)</td><td id="r_theta_L"></td><td id="r_theta_R"></td></tr>
+          <tr class="big"><td title="Hub flange hole to thread end. = √(R²+r²+f²−2·R·r·cosθ) − ½·flange-hole. Geometric length; no spoke-stretch compensation.">Spoke length</td><td id="r_len_L"></td><td id="r_len_R"></td></tr>
+          <tr><td title="3-D gap from a spoke to its crossing neighbour's elbow: √(gap²+flange-thickness²) − spoke-gauge. Our own model; not comparable to other tools.">Spoke head clearance</td><td id="r_clr_L"></td><td id="r_clr_R"></td></tr>
+          <tr><td title="Angle between the spoke and the plane of the wheel = atan(f / in-plane run). Bigger braces the wheel better laterally.">Bracing angle</td><td id="r_brace_L"></td><td id="r_brace_R"></td></tr>
+          <tr><td title="Tighter side pinned at 100%; the other is its true ratio (∝ 1/sin bracing). The offset rule-of-thumb is a close approximation.">Tension distribution</td><td id="r_tens_L"></td><td id="r_tens_R"></td></tr>
+          <tr><td title="How far off radial the spoke leaves the hub flange = asin(lever-arm / r).">Flange exit angle</td><td id="r_exit_L"></td><td id="r_exit_R"></td></tr>
+          <tr><td title="Perpendicular distance from the axle to the spoke line (Musson's term). Effective tangential PCD = 2 × lever arm.">Lever arm</td><td id="r_etpcd_L"></td><td id="r_etpcd_R"></td></tr>
+          <tr><td title="How far off radial the spoke meets the rim = asin(lever-arm / R). Drives nipple stress / washer need (Musson's 'entry angle').">Rim entry angle</td><td id="r_wrap_L"></td><td id="r_wrap_R"></td></tr>
+          <tr><td title="Angle subtended at the axle between a hub hole and its rim hole = crosses × 720 / spoke-count.">Theta angle (hub→rim)</td><td id="r_theta_L"></td><td id="r_theta_R"></td></tr>
         </tbody>
       </table>
-      <p class="hint">The <b>order</b> line under each length rounds to the nearest mm (and the nearest even length, since many spokes are stocked in 2&nbsp;mm steps); when in doubt, don't round <i>up</i> past the rim. <b>Head clearance</b> is the 3-D gap from a spoke to its crossing neighbour's elbow, using your flange thickness and spoke gauge — below ~1&nbsp;mm (shown in red) the heads may foul, so try one cross less.</p>
+      <p class="hint">Hover any row label for its definition. The <b>order</b> line rounds to the nearest mm (and the nearest even length, since many spokes are stocked in 2&nbsp;mm steps); when in doubt, don't round <i>up</i> past the rim. <b>Head clearance</b> below ~1&nbsp;mm (red) means the heads may foul — try one cross less. Crow's foot reports its two lengths (radial + crossed). Full method below.</p>
+      <p class="hint warn" id="patwarn" style="font-weight:600"></p>
     </div>
 
     <div class="diagrams">
@@ -192,27 +203,67 @@
 </main>
 
 <div class="foot">
-  <details>
-    <summary>The math (and what each number means)</summary>
-    <p style="max-width:760px">
-    Spoke length uses the standard 3-D triangle:
-    <code>L = √(R² + r² + f² − 2·R·r·cos θ) − ½·(spoke hole dia)</code>,
-    where <code>R = ERD/2</code>, <code>r = flange PCD/2</code>, <code>f</code> is the axial
-    center-to-flange distance (adjusted by hub offset and drilling offset), and
-    <code>θ = crosses × 720 / spoke-count</code> is the angle subtended at the axle between a
-    hub hole and its rim hole. <b>Bracing angle</b> = atan(f / in-plane run): a bigger angle
-    braces the wheel better laterally. <b>Tension distribution</b> compares the two bracing
-    angles — the shallower (usually drive) side carries the higher tension. <b>Effective
-    tangential PCD</b> is the circle the spokes run tangent to; <b>flange exit</b> and
-    <b>wrap</b> are how far off radial the spoke leaves the hub and meets the rim. <b>Spoke
-    head clearance</b> is modelled as the 3-D distance between a spoke and the elbow of its
-    immediate crossing neighbour:
-    <code>clearance = √(gap² + flange_thickness²) − spoke_gauge</code>, where <code>gap</code> is
-    the in-plane perpendicular distance from the neighbour hole to the spoke line. Because
-    adjacent heads sit on opposite faces of the flange, thickness genuinely buys room — the
-    hub-detail diagram lets you see it directly.</p>
+  <details open>
+    <summary>The math — every formula, and the choices we made (please check our work)</summary>
+    <div style="max-width:820px">
+
+    <p><b>Why this is spelled out.</b> There's no money in this — no ads, no accounts required
+    to compute, nothing sold, nothing tracked. A spoke calculator is only worth using if you
+    can trust it, and trust comes from being able to <i>check it</i>, not from being asked to.
+    So every number below is defined, every modelling choice is stated plainly (including where
+    we differ from other tools and where we're deliberately approximate), and the entire thing
+    is one readable file: <b>View Source</b>, or read it on
+    <a href="https://github.com/starsimpson/freewheel">GitHub</a>. If you find an error, that's
+    a bug we want to fix.</p>
+
+    <h4 style="margin:14px 0 4px">Spoke length</h4>
+    <p><code>L = √(R² + r² + f² − 2·R·r·cos θ) − ½·(flange spoke-hole dia)</code></p>
+    <ul style="margin:4px 0 0">
+      <li><code>R = ERD / 2</code> — the rim's effective radius, the point the spoke end should reach.</li>
+      <li><code>r = flange PCD / 2</code> — radius of the hub's spoke-hole circle.</li>
+      <li><code>f</code> — axial centre-to-flange distance, adjusted by hub offset and drilling offset.</li>
+      <li><code>θ = crosses × 720 / spoke-count</code> — angle at the axle between a hub hole and its rim hole.</li>
+      <li>We subtract <b>half the hub flange hole</b> (the spoke seats against the far side of the hole). This is a <i>hub</i> dimension — that's why it lives in the Hub panel.</li>
+    </ul>
+
+    <h4 style="margin:14px 0 4px">Three choices a careful builder should know about</h4>
+    <ul style="margin:4px 0 0">
+      <li><b>No spoke-stretch compensation.</b> We report the <i>geometric</i> length, like spocalc, DT and Sapim. Roger Musson's calculator subtracts the stretch a spoke takes under tension (~0.1–0.4&nbsp;mm, thinner spokes more), so our number can read ~0.2&nbsp;mm longer than his — usually inside rounding. A stretch toggle is on the roadmap.</li>
+      <li><b>ERD already includes your nipple.</b> ERD depends on nipple length (~2&nbsp;mm between a 12 and 16&nbsp;mm nipple — a whole spoke size). Enter the ERD measured with the nipples you'll use. A nipple picker is on the roadmap.</li>
+      <li><b>Bench measurements beat catalogue specs.</b> Manufacturer ERD especially is often optimistic. When precision matters, measure your own rim (two-spoke method) and hub.</li>
+    </ul>
+
+    <h4 style="margin:14px 0 4px">The other numbers</h4>
+    <ul style="margin:4px 0 0">
+      <li><b>Bracing angle</b> = atan(f / in-plane&nbsp;run) — the spoke's angle to the wheel plane; more is better lateral support.</li>
+      <li><b>Tension distribution</b> — for the wheel to sit centred, T·sin(bracing) must match on both sides, so tension ∝ 1/sin(bracing). We pin the tighter side at 100% and show the other as its true ratio. The familiar "offset ratio" (e.g. 50%) is the small-angle approximation of the same thing.</li>
+      <li><b>Lever arm</b> = perpendicular distance from the axle to the spoke (Musson's term). <b>Effective tangential PCD = 2 × lever arm.</b></li>
+      <li><b>Flange exit angle</b> = asin(lever-arm / r); <b>rim entry angle</b> = asin(lever-arm / R). The rim entry angle is what stresses the nipple and decides whether you want washers.</li>
+    </ul>
+
+    <h4 style="margin:14px 0 4px">Head clearance (our model, not a standard)</h4>
+    <p><code>clearance = √(gap² + flange_thickness²) − spoke_gauge</code>, where <code>gap</code> is
+    the in-plane perpendicular distance from the crossing neighbour's hole to the spoke line.
+    Adjacent heads sit on opposite faces of the flange, so thickness genuinely adds room. No
+    other calculator computes this the same way, so don't expect the number to match — but the
+    hub-detail diagram draws it so you can judge it with your own eyes. For crow's foot it's an
+    approximation (computed on the crossed spokes).</p>
+
+    <h4 style="margin:14px 0 4px">Lacing patterns</h4>
+    <p>Length depends only on each spoke's <code>θ</code>, so a pattern is fully described by the
+    set of crossings it uses. We support <b>radial (0×) through 5-cross</b> (one length), and
+    <b>crow's foot</b> — a repeating radial + crossed group that yields <i>two</i> lengths and
+    needs the spokes-per-side divisible by&nbsp;3 (24/36/48h). Decorative names like
+    <i>snowflake</i> are rearrangements that reduce to one of these for length purposes.
+    <b>Triplet</b> (grouped hub holes) and <b>straight-pull</b> hubs change the hub geometry
+    itself and aren't modelled yet — we'd rather omit them than ship a length we can't stand
+    behind.</p>
+
+    </div>
   </details>
-  <p>No data leaves your browser. Built as a single static page; calculations in JavaScript. © 2026.</p>
+  <p style="margin-top:14px">Free and open. No data leaves your browser — it's one static page, all
+  calculations in JavaScript you can read. Source on
+  <a href="https://github.com/starsimpson/freewheel">GitHub</a>. © 2026.</p>
 </div>
 
 <script>
@@ -226,9 +277,52 @@ const FIELDS = ["erd","oL","oR","sd","sg","wL","wR","dL","dR","ft","n","xL","xR"
 // ---- read inputs ----
 function read(){
   const v = {};
-  for(const f of FIELDS) v[f] = parseFloat($(f).value) || 0;
+  for(const f of FIELDS){
+    if(f==='xL' || f==='xR') v[f] = $(f).value;          // pattern code (string)
+    else v[f] = parseFloat($(f).value) || 0;
+  }
   v.n = Math.max(8, Math.round(v.n));
   return v;
+}
+
+// ---- lacing patterns -----------------------------------------------------
+// A pattern is fully described, for spoke-length purposes, by the crossings it
+// uses. parsePattern turns a UI code ("3", "cf2", ...) into {type, cross}.
+function parsePattern(code){
+  code = String(code);
+  if(code[0]==='c' && code[1]==='f') return {type:'crowsfoot', cross:parseInt(code.slice(2))||2};
+  return {type:'cross', cross:Math.max(0, parseInt(code)||0)};
+}
+function patternLabel(pat){
+  if(pat.type==='crowsfoot') return "crow's foot "+pat.cross+'×';
+  return pat.cross===0 ? 'radial' : pat.cross+'-cross';
+}
+// spoke groups (each its own length); crow's foot = radial + crossed
+function sideGroups(v, w, d, pat, sign){
+  const nf = v.n/2;
+  let defs, valid = true;
+  if(pat.type==='crowsfoot'){
+    valid = Number.isInteger(nf/3);
+    defs = [{label:'radial', cross:0, count:nf/3},
+            {label:pat.cross+'×', cross:pat.cross, count:2*nf/3}];
+  } else {
+    defs = [{label: pat.cross===0?'radial':pat.cross+'×', cross:pat.cross, count:nf}];
+  }
+  const groups = defs.map(g => Object.assign(side(v,w,d,g.cross,sign), {label:g.label, count:g.count}));
+  return {groups, valid};
+}
+// per-hole drawing plan: rim-hole angular offset for each of the nf hub holes
+function buildPlan(pat, nf, n){
+  const plan = [];
+  if(pat.type==='crowsfoot'){
+    const cd = pat.cross*720/n;
+    for(let i=0;i<nf;i++){ const m=i%3;
+      plan.push(m===0 ? {off:0, radial:true} : {off:(m===1?cd:-cd), radial:false}); }
+  } else {
+    const cd = pat.cross*720/n;
+    for(let i=0;i<nf;i++) plan.push({off:(i%2===0?cd:-cd), radial:pat.cross===0});
+  }
+  return plan;
 }
 
 // ---- core spoke geometry for one side ----
@@ -264,8 +358,18 @@ function side(v, w, d, x, sign){
 }
 
 function compute(v){
-  const L = side(v, v.wL, v.dL, v.xL, -1);
-  const Rt = side(v, v.wR, v.dR, v.xR, +1);
+  const buildSide = (w,d,code,sign) => {
+    const pat = parsePattern(code);
+    const {groups, valid} = sideGroups(v,w,d,pat,sign);
+    // the primary (largest-cross) group drives the angle rows, clearance & diagrams
+    const primary = groups.reduce((a,b)=> b.x>a.x ? b : a, groups[0]);
+    const s = Object.assign({}, primary);
+    s.groups = groups; s.valid = valid; s.pattern = pat;
+    s.label = patternLabel(pat); s.plan = buildPlan(pat, v.n/2, v.n);
+    return s;
+  };
+  const L = buildSide(v.wL, v.dL, v.xL, -1);
+  const Rt = buildSide(v.wR, v.dR, v.xR, +1);
   // Tension balance: for the wheel to sit centered the lateral force components
   // must cancel, so T*sin(bracing) is equal on both sides -> tension is inversely
   // proportional to sin(bracing). Express each side relative to the higher-tension
@@ -275,7 +379,7 @@ function compute(v){
   const invL = 1/sL, invR = 1/sR, mx = Math.max(invL, invR);
   L.tens = 100*invL/mx;
   Rt.tens = 100*invR/mx;
-  return {L,R:Rt};
+  return {L, R:Rt, valid:L.valid && Rt.valid};
 }
 
 // ---- formatting / results table ----
@@ -288,19 +392,28 @@ function roundText(len){
   return (mm===even) ? `order ${mm} mm` : `order ${mm} mm · ${even} if even-only`;
 }
 
+function lenCell(s){
+  if(s.groups.length===1)
+    return `${fmt(s.groups[0].len,1)}<small>${roundText(s.groups[0].len)}</small>`;
+  return s.groups.map(g =>
+    `<div style="font:14px/1.4 var(--mono)">${fmt(g.len,1)} `+
+    `<span style="color:var(--muted);font-size:11px">${g.label} ×${Math.round(g.count)} · ${roundText(g.len)}</span></div>`
+  ).join('');
+}
 function renderResults(c){
   const put=(id,t,cls)=>{const e=$(id); e.textContent=t; e.classList.remove('warn','ok'); if(cls)e.classList.add(cls);};
-  const putLen=(id,len)=>{$(id).innerHTML = `${fmt(len,1)}<small>${roundText(len)}</small>`;};
-  putLen('r_len_L', c.L.len);  putLen('r_len_R', c.R.len);
+  $('r_len_L').innerHTML = lenCell(c.L);  $('r_len_R').innerHTML = lenCell(c.R);
   const clrCls = v => v < 1.0 ? 'warn' : 'ok';
   put('r_clr_L', fmt(c.L.clr,1)+' mm', clrCls(c.L.clr));
   put('r_clr_R', fmt(c.R.clr,1)+' mm', clrCls(c.R.clr));
   put('r_brace_L', fmt(c.L.brace,1)+'°'); put('r_brace_R', fmt(c.R.brace,1)+'°');
   put('r_tens_L', Math.round(c.L.tens)+'%'); put('r_tens_R', Math.round(c.R.tens)+'%');
   put('r_exit_L', fmt(c.L.exit,1)+'°'); put('r_exit_R', fmt(c.R.exit,1)+'°');
-  put('r_etpcd_L', fmt(2*c.L.tang,1)); put('r_etpcd_R', fmt(2*c.R.tang,1));
+  put('r_etpcd_L', fmt(c.L.tang,1)); put('r_etpcd_R', fmt(c.R.tang,1));   // lever arm
   put('r_wrap_L', fmt(c.L.wrap,1)+'°'); put('r_wrap_R', fmt(c.R.wrap,1)+'°');
   put('r_theta_L', fmt(c.L.theta,1)+'°'); put('r_theta_R', fmt(c.R.theta,1)+'°');
+  $('patwarn').textContent = c.valid ? '' :
+    "Crow's foot needs the spokes-per-side divisible by 3 — use 24, 36, or 48 spokes. Lengths assume an even split.";
 }
 
 // ---- tiny SVG helpers ----
@@ -389,12 +502,12 @@ function drawDish(v,c){
 // =========================================================
 function drawLacing(svgId, capId, v, sd, sideName){
   const svg=$(svgId); clear(svg);
-  $(capId).textContent = (sd.x===0?'radial':sd.x+'-cross')+' · '+(v.n/2)+' spokes';
+  $(capId).textContent = sd.label+' · '+(v.n/2)+' spokes';
   const W=320,H=330, cx=W/2, cy=H/2+8;
   const R=v.erd/2, r=sd.r;
   const RR=(Math.min(W,H)/2 - 16);          // fit rim to box
   const s=RR/R, rr=r*s;
-  const half=v.n/2, holeStep=360/half, theta=sd.theta;
+  const half=v.n/2, holeStep=360/half, plan=sd.plan;
 
   svg.appendChild(el('circle',{cx,cy,r:RR, fill:'none', stroke:'#e3e3e3','stroke-width':1}));
   svg.appendChild(el('circle',{cx,cy,r:rr+5*s+2, fill:'#f4f4f4', stroke:'#bbb','stroke-width':1}));
@@ -403,8 +516,7 @@ function drawLacing(svgId, capId, v, sd, sideName){
   function spokes(color,wdt,phase){
     for(let i=0;i<half;i++){
       const aHub=(i*holeStep+phase)*D2R;
-      const dir=(i%2===0)?1:-1;
-      const aRim=aHub + dir*theta*D2R;
+      const aRim=aHub + plan[i].off*D2R;
       line(svg, cx+r*Math.cos(aHub)*s, cy-r*Math.sin(aHub)*s,
                 cx+R*Math.cos(aRim)*s, cy-R*Math.sin(aRim)*s, {stroke:color,'stroke-width':wdt});
     }
@@ -430,7 +542,7 @@ function drawHubDetail(svgId, v, sd){
   const viewR = r*2.6;                       // mm shown from center to edge
   const s=(Math.min(W,H)/2 - 14)/viewR;
   const rr=r*s, headR=Math.max(3.0, v.sg*s);  // drawn head radius (~spoke elbow)
-  const half=v.n/2, holeStep=360/half, theta=sd.theta;
+  const half=v.n/2, holeStep=360/half, plan=sd.plan;
   const R=v.erd/2;
 
   // flange disc
@@ -442,8 +554,7 @@ function drawHubDetail(svgId, v, sd){
   // Heads alternate side of flange: even = "in" (drawn as ring), odd = "out" (filled).
   for(let i=0;i<half;i++){
     const aHub=i*holeStep*D2R;
-    const dir=(i%2===0)?1:-1;
-    const aRim=aHub + dir*theta*D2R;
+    const aRim=aHub + plan[i].off*D2R;
     const hx=cx+r*Math.cos(aHub)*s, hy=cy-r*Math.sin(aHub)*s;
     // direction toward rim hole
     const rx=cx+R*Math.cos(aRim)*s, ry=cy-R*Math.sin(aRim)*s;
