@@ -46,6 +46,11 @@
   .use:hover{background:var(--accent); color:#fff}
   .empty{color:#bbb}
   .err{color:var(--warn); padding:20px 0}
+  .chip{display:inline-block; font:600 10px/1.45 var(--mono); padding:1px 7px; border-radius:10px; white-space:nowrap}
+  .src-fs{background:#eef0f3; color:#586173}
+  .src-mfr{background:#e8f0fe; color:#1f4fd6}
+  .src-meas{background:#e7f6ec; color:#0a7d33}
+  .src-comm{background:#fdf3e3; color:#9a6700}
 </style>
 </head>
 <body>
@@ -64,6 +69,7 @@
     <span class="count" id="count"></span>
   </div>
   <p class="note">Recovered in full from the archived <a href="https://web.archive.org/web/20250704140802/https://kstoerz.com/freespoke/rims">Freespoke rim list</a> — every page of the catalogue, captured on the Wayback Machine in 2024–2026. <b>Use</b> sends the rim's <b>ERD</b> to the calculator — confirm it matches the nipples you'll run. Click a column to sort. This data survived because of the Archive — if it's useful to you, please <a href="https://archive.org/donate/">donate to the Internet Archive</a>.</p>
+  <p class="note">The <b>Source</b> column marks where each value came from. Everything here is <span class="chip src-fs">Catalogue</span> — Freespoke data via the Archive, <b>unverified by us</b>, so measure your own when precision matters. Future <span class="chip src-meas">Measured</span>, <span class="chip src-mfr">Mfr spec</span>, and <span class="chip src-comm">Community</span> entries will be marked accordingly.</p>
   <table>
     <thead><tr id="head"></tr></thead>
     <tbody id="rows"></tbody>
@@ -86,9 +92,19 @@ const COLS = [
   {k:'innerWidth', t:'Inner W', f:r=>fmt(r.innerWidth)},
   {k:'height', t:'Height',      f:r=>fmt(r.height)},
   {k:'weight', t:'Weight',      f:r=>r.weight||dash()},
+  {k:'src',    t:'Source', l:true, f:r=>srcChip(r.src)},
 ];
 const fmt = v => (v==null||v==='') ? dash() : (''+v);
 const dash = () => '<span class="empty">—</span>';
+
+// provenance vocabulary — every value carries where it came from + how trusted it is
+const SRC = {
+  fs:           ['Catalogue','src-fs',  'Freespoke database, recovered via the Internet Archive — community-sourced, unverified by us.'],
+  manufacturer: ['Mfr spec', 'src-mfr', 'From a manufacturer spec sheet.'],
+  measured:     ['Measured', 'src-meas','Measured on a bench.'],
+  community:    ['Community', 'src-comm','User-submitted, unverified.'],
+};
+function srcChip(s){ const x=SRC[s]||SRC.fs; return `<span class="chip ${x[1]}" title="${x[2]}">${x[0]}</span>`; }
 
 let DATA=[], sortKey='mfg', sortDir=1, q='';
 
@@ -141,7 +157,7 @@ $('#q').addEventListener('input', e=>{ q=e.target.value; render(); });
 
 fetch('data/rims.json')
   .then(r=>r.json())
-  .then(d=>{ DATA=d; render(); })
+  .then(d=>{ d.forEach(r=>{ if(!r.src) r.src='fs'; }); DATA=d; render(); })
   .catch(()=>{ $('#err').hidden=false; });
 </script>
 </body>

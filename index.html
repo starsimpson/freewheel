@@ -121,6 +121,8 @@
         <input id="oR" type="number" step="0.1" value="0">
         <div class="lab">Spoke gauge <small>wire / elbow dia, mm</small></div>
         <input id="sg" class="single" type="number" step="0.1" value="2.0" style="width:158px">
+        <div class="lab">Nipple length <small>mm; ERD taken as measured at 12</small></div>
+        <input id="nip" class="single" type="number" step="1" value="12" style="width:158px">
       </div>
     </div>
 
@@ -165,6 +167,10 @@
         </select>
         <div class="lab">Hub offset <small>+ shifts whole hub right (fatbike)</small></div>
         <input id="ho" class="single" type="number" step="0.1" value="0" style="width:158px">
+        <div class="lab">Build tension <small>kgf; only used for stretch comp.</small></div>
+        <input id="tension" class="single" type="number" step="5" value="110" style="width:158px">
+        <div class="lab">Spoke stretch <small>cut shorter by elongation at tension</small></div>
+        <label class="single" style="justify-self:start; font:13px var(--mono); display:flex; gap:7px; align-items:center"><input id="stretch" type="checkbox" style="width:auto"> compensate</label>
       </div>
       <p class="hint">Edits recalculate instantly. <a href="#" id="permalink">Copy a shareable link →</a></p>
     </div>
@@ -177,7 +183,7 @@
       <table class="results">
         <thead><tr><th></th><th>Left</th><th>Right</th></tr></thead>
         <tbody>
-          <tr class="big"><td title="Hub flange hole to thread end. = √(R²+r²+f²−2·R·r·cosθ) − ½·flange-hole. Geometric length; no spoke-stretch compensation.">Spoke length</td><td id="r_len_L"></td><td id="r_len_R"></td></tr>
+          <tr class="big"><td title="Hub flange hole to thread end. = √(R²+r²+f²−2·R·r·cosθ) − ½·flange-hole. Geometric length unless spoke-stretch compensation is ticked.">Spoke length</td><td id="r_len_L"></td><td id="r_len_R"></td></tr>
           <tr><td title="3-D gap from a spoke to its crossing neighbour's elbow: √(gap²+flange-thickness²) − spoke-gauge. Our own model; not comparable to other tools.">Spoke head clearance</td><td id="r_clr_L"></td><td id="r_clr_R"></td></tr>
           <tr><td title="Angle between the spoke and the plane of the wheel = atan(f / in-plane run). Bigger braces the wheel better laterally.">Bracing angle</td><td id="r_brace_L"></td><td id="r_brace_R"></td></tr>
           <tr><td title="Tighter side pinned at 100%; the other is its true ratio (∝ 1/sin bracing). The offset rule-of-thumb is a close approximation.">Tension distribution</td><td id="r_tens_L"></td><td id="r_tens_R"></td></tr>
@@ -189,6 +195,7 @@
       </table>
       <p class="hint">Hover any row label for its definition. The <b>order</b> line rounds to the nearest mm (and the nearest even length, since many spokes are stocked in 2&nbsp;mm steps); when in doubt, don't round <i>up</i> past the rim. <b>Head clearance</b> below ~1&nbsp;mm (red) means the heads may foul — try one cross less. Crow's foot reports its two lengths (radial + crossed). Full method below.</p>
       <p class="hint warn" id="patwarn" style="font-weight:600"></p>
+      <p class="hint" id="advnote"></p>
     </div>
 
     <div class="diagrams">
@@ -237,8 +244,8 @@
 
     <h4 style="margin:14px 0 4px">Three choices a careful builder should know about</h4>
     <ul style="margin:4px 0 0">
-      <li><b>No spoke-stretch compensation.</b> We report the <i>geometric</i> length, like spocalc, DT and Sapim. Roger Musson's calculator subtracts the stretch a spoke takes under tension (~0.1–0.4&nbsp;mm, thinner spokes more), so our number can read ~0.2&nbsp;mm longer than his — usually inside rounding. A stretch toggle is on the roadmap.</li>
-      <li><b>ERD already includes your nipple.</b> ERD depends on nipple length (~2&nbsp;mm between a 12 and 16&nbsp;mm nipple — a whole spoke size). Enter the ERD measured with the nipples you'll use. A nipple picker is on the roadmap.</li>
+      <li><b>Spoke-stretch compensation (optional).</b> By default we report the <i>geometric</i> length, like spocalc, DT and Sapim. Tick <b>compensate</b> and each spoke is shortened by the elongation it takes at your build tension — <code>ΔL = T·L/(E·A)</code>, with <code>E = 200&nbsp;GPa</code> and <code>A = π·(gauge/2)²</code> — giving the unstressed length to cut/order (Musson does this; ~0.2–0.5&nbsp;mm, thinner spokes more). Area uses the spoke gauge as straight; butted spokes stretch a touch more.</li>
+      <li><b>Nipple length adjusts ERD.</b> ERD depends on the nipple (~2&nbsp;mm of effective ERD between a 12 and 16&nbsp;mm nipple — a whole spoke size). We take the entered ERD as measured to a <b>12&nbsp;mm</b> nipple's slot and shift it by <code>2·(nipple − 12)</code>; the effective ERD is shown when it differs. Best practice: bench-measure ERD with the nipples you'll actually use and leave the field at 12.</li>
       <li><b>Bench measurements beat catalogue specs.</b> Manufacturer ERD especially is often optimistic. When precision matters, measure your own rim (two-spoke method) and hub.</li>
     </ul>
 
@@ -284,7 +291,10 @@ const $ = id => document.getElementById(id);
 const D2R = Math.PI/180, R2D = 180/Math.PI;
 const SVGNS = "http://www.w3.org/2000/svg";
 
-const FIELDS = ["erd","oL","oR","sd","sg","wL","wR","dL","dR","ft","n","xL","xR","ho"];
+const FIELDS = ["erd","oL","oR","sd","sg","nip","wL","wR","dL","dR","ft","n","xL","xR","ho","tension"];
+const E_STEEL = 200000;   // N/mm^2, Young's modulus for stainless spokes
+const KGF = 9.80665;      // N per kgf
+const NIP_REF = 12;       // ERD is taken as measured to a 12 mm nipple's slot
 
 // ---- read inputs ----
 function read(){
@@ -294,6 +304,10 @@ function read(){
     else v[f] = parseFloat($(f).value) || 0;
   }
   v.n = Math.max(8, Math.round(v.n));
+  v.stretch = $('stretch').checked;
+  // #2 nipple coupling: longer nipple reaches further out, so effective ERD grows.
+  v.erdRaw = v.erd;
+  v.erd = v.erdRaw + 2*(v.nip - NIP_REF);
   return v;
 }
 
@@ -349,7 +363,12 @@ function side(v, w, d, x, sign){
   const o = (sign<0) ? v.oL : v.oR;
   const f = Math.abs(w + sign*v.ho + o);   // +o lengthens the axial run
   const inPlane = Math.sqrt(R*R + r*r - 2*R*r*Math.cos(th)); // chord in wheel plane
-  const len = Math.sqrt(inPlane*inPlane + f*f) - v.sd/2;
+  const lenGeo = Math.sqrt(inPlane*inPlane + f*f) - v.sd/2;  // geometric (at tension)
+  // #1 spoke-stretch compensation: at tension the spoke has elongated by
+  // dL = T*L/(E*A); the unstressed length to order/cut is that much shorter.
+  const area = Math.PI*(v.sg/2)*(v.sg/2);
+  const stretchDelta = (v.stretch && area>0) ? (v.tension*KGF)*lenGeo/(E_STEEL*area) : 0;
+  const len = lenGeo - stretchDelta;
   const brace = Math.atan2(f, inPlane)*R2D;
   // perpendicular distance from axle to the spoke line = effective tangential radius
   const tang = (inPlane>0) ? (R*r*Math.sin(th))/inPlane : 0;
@@ -366,7 +385,7 @@ function side(v, w, d, x, sign){
   const gap = p*(Math.cos(phi)-1) + Math.sqrt(Math.max(0,r*r-p*p))*Math.sin(phi);
   const t = v.ft, hr = v.sg;           // flange thickness, elbow keep-out radius
   const clr = Math.sqrt(gap*gap + t*t) - hr;
-  return {R,r,theta,th,f,inPlane,len,brace,tang,exit,wrap,gap,clr,x};
+  return {R,r,theta,th,f,inPlane,len,lenGeo,stretchDelta,brace,tang,exit,wrap,gap,clr,x};
 }
 
 function compute(v){
@@ -412,7 +431,7 @@ function lenCell(s){
     `<span style="color:var(--muted);font-size:11px">${g.label} ×${Math.round(g.count)} · ${roundText(g.len)}</span></div>`
   ).join('');
 }
-function renderResults(c){
+function renderResults(v, c){
   const put=(id,t,cls)=>{const e=$(id); e.textContent=t; e.classList.remove('warn','ok'); if(cls)e.classList.add(cls);};
   $('r_len_L').innerHTML = lenCell(c.L);  $('r_len_R').innerHTML = lenCell(c.R);
   const clrCls = v => v < 1.0 ? 'warn' : 'ok';
@@ -426,6 +445,15 @@ function renderResults(c){
   put('r_theta_L', fmt(c.L.theta,1)+'°'); put('r_theta_R', fmt(c.R.theta,1)+'°');
   $('patwarn').textContent = c.valid ? '' :
     "Crow's foot needs the spokes-per-side divisible by 3 — use 24, 36, or 48 spokes. Lengths assume an even split.";
+  // advisories: effective ERD (nipple) and stretch compensation
+  const adv=[];
+  if(Math.abs(v.nip-NIP_REF) >= 0.5)
+    adv.push(`Effective ERD ${fmt(v.erd,1)} mm (entered ${fmt(v.erdRaw,1)}, ${v.nip>NIP_REF?'+':''}${fmt(2*(v.nip-NIP_REF),1)} for a ${v.nip} mm nipple).`);
+  if(v.stretch){
+    const dmax=Math.max(c.L.stretchDelta, c.R.stretchDelta);
+    adv.push(`Lengths shortened ~${fmt(dmax,1)} mm for spoke stretch at ${v.tension} kgf (straight-gauge ${v.sg} mm; butted spokes stretch a little more).`);
+  }
+  $('advnote').innerHTML = adv.join('<br>');
 }
 
 // ---- tiny SVG helpers ----
@@ -597,7 +625,7 @@ function drawHubDetail(svgId, v, sd){
 function recalc(){
   const v=read();
   const c=compute(v);
-  renderResults(c);
+  renderResults(v,c);
   drawDish(v,c);
   drawLacing('svgLacL','lacLcap', v, c.L, 'Left flange');
   drawLacing('svgLacR','lacRcap', v, c.R, 'Right flange');
@@ -609,6 +637,7 @@ function recalc(){
 function syncToHash(){
   const p=new URLSearchParams();
   for(const f of FIELDS) p.set(f, $(f).value);
+  p.set('stretch', $('stretch').checked ? 1 : 0);
   history.replaceState(null,'','#'+p.toString());
 }
 function loadFromHash(){
@@ -616,11 +645,13 @@ function loadFromHash(){
   const p=new URLSearchParams(location.hash.slice(1));
   let any=false;
   for(const f of FIELDS) if(p.has(f)){ $(f).value=p.get(f); any=true; }
+  if(p.has('stretch')){ $('stretch').checked = p.get('stretch')==='1'; any=true; }
   return any;
 }
 // Persisted state, so picking a rim/hub on another tab carries back here.
 function saveState(){
   const st={}; for(const f of FIELDS) st[f]=$(f).value;
+  st.stretch = $('stretch').checked;
   try{ localStorage.setItem('spokes.state', JSON.stringify(st)); }catch(e){}
 }
 function loadState(){
@@ -628,11 +659,13 @@ function loadState(){
   if(!st) return false;
   let any=false;
   for(const f of FIELDS) if(st[f]!=null){ $(f).value=st[f]; any=true; }
+  if(st.stretch!=null){ $('stretch').checked = !!st.stretch; any=true; }
   return any;
 }
 
-for(const f of FIELDS){
+for(const f of [...FIELDS,'stretch']){
   $(f).addEventListener('input', ()=>{ recalc(); syncToHash(); saveState(); });
+  $(f).addEventListener('change', ()=>{ recalc(); syncToHash(); saveState(); });
 }
 $('permalink').addEventListener('click', e=>{
   e.preventDefault(); syncToHash();
