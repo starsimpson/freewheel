@@ -115,6 +115,8 @@ function loadStateSet(field, value){
 }
 function useRim(r){
   loadStateSet('erd', r.erd);          // ERD is the unambiguous value a rim contributes
+  // catalogue ERD is unverified — hand the calculator a ~1 mm uncertainty band
+  loadStateSet('erdTol', r.src==='measured' ? 0 : 1);
   location.href = 'index.html';
 }
 

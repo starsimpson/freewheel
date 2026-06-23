@@ -116,6 +116,8 @@
       <div class="grid">
         <div class="lab">ERD <small>effective rim diameter, mm</small></div>
         <input id="erd" class="single" type="number" step="0.1" value="602.3" style="width:158px">
+        <div class="lab">ERD ± <small>uncertainty; 0 = exact</small></div>
+        <input id="erdTol" class="single" type="number" step="0.5" min="0" value="0" style="width:158px">
         <div class="lab">Drilling offset <small>+ moves L nipple left / R nipple right</small></div>
         <input id="oL" type="number" step="0.1" value="0">
         <input id="oR" type="number" step="0.1" value="0">
@@ -247,6 +249,7 @@
       <li><b>Spoke-stretch compensation (optional).</b> By default we report the <i>geometric</i> length, like spocalc, DT and Sapim. Tick <b>compensate</b> and each spoke is shortened by the elongation it takes at your build tension — <code>ΔL = T·L/(E·A)</code>, with <code>E = 200&nbsp;GPa</code> and <code>A = π·(gauge/2)²</code> — giving the unstressed length to cut/order (Musson does this; ~0.2–0.5&nbsp;mm, thinner spokes more). Area uses the spoke gauge as straight; butted spokes stretch a touch more.</li>
       <li><b>Nipple length adjusts ERD.</b> ERD depends on the nipple (~2&nbsp;mm of effective ERD between a 12 and 16&nbsp;mm nipple — a whole spoke size). We take the entered ERD as measured to a <b>12&nbsp;mm</b> nipple's slot and shift it by <code>2·(nipple − 12)</code>; the effective ERD is shown when it differs. Best practice: bench-measure ERD with the nipples you'll actually use and leave the field at 12.</li>
       <li><b>Bench measurements beat catalogue specs.</b> Manufacturer ERD especially is often optimistic. When precision matters, measure your own rim (two-spoke method) and hub.</li>
+      <li><b>Uncertainty is shown, not hidden.</b> Set <b>ERD&nbsp;±</b> to your measurement's confidence and we propagate it through the formula to a band on the length (e.g. <code>294.2 ±0.5</code>). Picking a rim from the catalogue auto-sets ±1&nbsp;mm, since those values are unverified; a bench-measured ERD deserves 0.</li>
     </ul>
 
     <h4 style="margin:14px 0 4px">The other numbers</h4>
@@ -291,7 +294,7 @@ const $ = id => document.getElementById(id);
 const D2R = Math.PI/180, R2D = 180/Math.PI;
 const SVGNS = "http://www.w3.org/2000/svg";
 
-const FIELDS = ["erd","oL","oR","sd","sg","nip","wL","wR","dL","dR","ft","n","xL","xR","ho","tension"];
+const FIELDS = ["erd","erdTol","oL","oR","sd","sg","nip","wL","wR","dL","dR","ft","n","xL","xR","ho","tension"];
 const E_STEEL = 200000;   // N/mm^2, Young's modulus for stainless spokes
 const KGF = 9.80665;      // N per kgf
 const NIP_REF = 12;       // ERD is taken as measured to a 12 mm nipple's slot
@@ -334,7 +337,16 @@ function sideGroups(v, w, d, pat, sign){
   } else {
     defs = [{label: pat.cross===0?'radial':pat.cross+'×', cross:pat.cross, count:nf}];
   }
-  const groups = defs.map(g => Object.assign(side(v,w,d,g.cross,sign), {label:g.label, count:g.count}));
+  const groups = defs.map(g => {
+    const m = Object.assign(side(v,w,d,g.cross,sign), {label:g.label, count:g.count});
+    // #6 uncertainty: propagate the ERD tolerance through the actual formula
+    if(v.erdTol > 0){
+      const hi = side(Object.assign({},v,{erd:v.erd+v.erdTol}), w,d,g.cross,sign).len;
+      const lo = side(Object.assign({},v,{erd:v.erd-v.erdTol}), w,d,g.cross,sign).len;
+      m.lenTol = Math.abs(hi-lo)/2;
+    } else m.lenTol = 0;
+    return m;
+  });
   return {groups, valid};
 }
 // per-hole drawing plan: rim-hole angular offset for each of the nf hub holes
@@ -423,11 +435,14 @@ function roundText(len){
   return (mm===even) ? `order ${mm} mm` : `order ${mm} mm · ${even} if even-only`;
 }
 
+function tol(g){ return g.lenTol>0.05 ? ` ±${fmt(g.lenTol,1)}` : ''; }
 function lenCell(s){
-  if(s.groups.length===1)
-    return `${fmt(s.groups[0].len,1)}<small>${roundText(s.groups[0].len)}</small>`;
+  if(s.groups.length===1){
+    const g=s.groups[0];
+    return `${fmt(g.len,1)}<span style="font-size:13px;color:var(--muted)">${tol(g)}</span><small>${roundText(g.len)}</small>`;
+  }
   return s.groups.map(g =>
-    `<div style="font:14px/1.4 var(--mono)">${fmt(g.len,1)} `+
+    `<div style="font:14px/1.4 var(--mono)">${fmt(g.len,1)}${tol(g)} `+
     `<span style="color:var(--muted);font-size:11px">${g.label} ×${Math.round(g.count)} · ${roundText(g.len)}</span></div>`
   ).join('');
 }
