@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Hubs — Spokes</title>
+<meta name="description" content="A browsable database of hub dimensions (flange diameter, flange offsets, OLN) for bicycle spoke length calculation."/>
+<style>
+  :root{
+    --bg:#fff; --ink:#1a1a1a; --muted:#6b7280; --rule:#d9d9d9; --accent:#1f4fd6;
+    --accentbg:#eef3ff; --field:#fafafa; --warn:#c81e1e;
+    --mono:"SFMono-Regular",ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  header{padding:22px 20px 0; max-width:1180px; margin:0 auto}
+  header h1{font-size:24px; margin:0 0 2px; letter-spacing:-.01em}
+  header p{margin:0 0 12px; color:var(--muted); font-size:14px}
+  nav.tabs{display:flex; gap:4px; border-bottom:1px solid var(--rule); max-width:1180px; margin:0 auto; padding:0 20px}
+  nav.tabs a{padding:8px 14px; font-size:14px; color:var(--muted); text-decoration:none;
+    border:1px solid transparent; border-bottom:none; border-radius:8px 8px 0 0; margin-bottom:-1px}
+  nav.tabs a:hover{color:var(--ink)}
+  nav.tabs a.on{color:var(--ink); font-weight:600; background:#fff; border-color:var(--rule)}
+  main{max-width:1180px; margin:0 auto; padding:16px 20px 60px}
+  .bar{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px}
+  .bar input{font:14px var(--mono); padding:7px 10px; border:1px solid var(--rule);
+    border-radius:7px; background:var(--field); width:280px; max-width:60vw}
+  .bar input:focus{outline:2px solid var(--accentbg); border-color:var(--accent)}
+  .bar select{font:13px var(--mono); padding:7px 8px; border:1px solid var(--rule); border-radius:7px; background:var(--field)}
+  .count{color:var(--muted); font-size:13px}
+  .note{color:var(--muted); font-size:12px; margin:0 0 14px; max-width:820px}
+  .note a{color:var(--accent)}
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  thead th{position:sticky; top:0; background:#fff; text-align:right; padding:8px 10px;
+    border-bottom:2px solid var(--rule); white-space:nowrap; cursor:pointer; user-select:none; font-size:11px;
+    text-transform:uppercase; letter-spacing:.04em; color:var(--muted)}
+  thead th:first-child, thead th.l{text-align:left}
+  thead th .ar{color:var(--accent); font-weight:700}
+  tbody td{padding:7px 10px; border-bottom:1px solid #eee; text-align:right; font-family:var(--mono); white-space:nowrap}
+  tbody td.l{text-align:left; font-family:inherit}
+  tbody tr:hover{background:#fafbff}
+  .use{font:12px var(--mono); padding:4px 11px; border:1px solid var(--accent); color:var(--accent);
+    background:#fff; border-radius:6px; cursor:pointer}
+  .use:hover{background:var(--accent); color:#fff}
+  .empty{color:#bbb}
+  .err{color:var(--warn); padding:20px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>Spokes</h1>
+  <p>Hub database — find your hub's flange diameter and offsets, then send them to the calculator.</p>
+</header>
+<nav class="tabs">
+  <a href="index.html">Calculator</a>
+  <a href="rims.html">Rims</a>
+  <a href="hubs.html" class="on">Hubs</a>
+</nav>
+<main>
+  <div class="bar">
+    <input id="q" type="search" placeholder="filter — manufacturer, model, axle…" autocomplete="off">
+    <select id="pos"><option value="">front + rear</option><option>Front</option><option>Rear</option></select>
+    <span class="count" id="count"></span>
+  </div>
+  <p class="note">Seeded from the archived <a href="https://web.archive.org/web/20250704140802/https://kstoerz.com/freespoke/hubs">Freespoke hub list</a> (the snapshot captured one alphabetical page). <b>Use</b> sends the flange diameter and centre-to-flange offsets (left/right) to the calculator. Click a column to sort.</p>
+  <table>
+    <thead><tr id="head"></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div id="err" class="err" hidden>Could not load the hub data. Serve this over http (not file://).</div>
+</main>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const fmt = v => (v==null||v==='') ? dash() : (''+v);
+const dash = () => '<span class="empty">—</span>';
+const lr = (L,R) => (L==null&&R==null) ? dash() : (L===R ? (''+L) : (fmtn(L)+' / '+fmtn(R)));
+const fmtn = v => v==null ? '—' : (''+v);
+
+const COLS = [
+  {k:'mfg',   t:'Manufacturer', l:true, f:h=>h.mfg, s:h=>h.mfg},
+  {k:'model', t:'Model',        l:true, f:h=>h.model, s:h=>h.model},
+  {k:'position', t:'Position',  l:true, f:h=>h.position, s:h=>h.position},
+  {k:'oln',   t:'OLN',          f:h=>h.oln, s:h=>h.oln},
+  {k:'axle',  t:'Axle',         l:true, f:h=>h.axle, s:h=>h.axle},
+  {k:'brake', t:'Brake',        l:true, f:h=>h.brake, s:h=>h.brake},
+  {k:'drive', t:'Drive',        l:true, f:h=>h.drive, s:h=>h.drive},
+  {k:'flangeDia', t:'Flange Ø', f:h=>lr(h.flangeDiaL,h.flangeDiaR), s:h=>h.flangeDiaL},
+  {k:'flangeOff', t:'Flange offset L/R', f:h=>lr(h.flangeOffL,h.flangeOffR), s:h=>h.flangeOffL},
+  {k:'midFlangeOffset', t:'Mid-flange', f:h=>fmt(h.midFlangeOffset), s:h=>h.midFlangeOffset},
+  {k:'weight', t:'Weight',      f:h=>h.weight||dash(), s:h=>parseFloat(h.weight)||0},
+];
+
+let DATA=[], sortKey='mfg', sortDir=1, q='', pos='';
+
+function setState(obj){
+  let st={}; try{ st=JSON.parse(localStorage.getItem('spokes.state')||'{}'); }catch(e){}
+  Object.assign(st, obj);
+  try{ localStorage.setItem('spokes.state', JSON.stringify(st)); }catch(e){}
+}
+function useHub(h){
+  // map hub geometry onto the calculator's left/right inputs
+  const o={};
+  if(h.flangeOffL!=null) o.wL=String(h.flangeOffL);
+  if(h.flangeOffR!=null) o.wR=String(h.flangeOffR);
+  if(h.flangeDiaL!=null) o.dL=String(h.flangeDiaL);
+  if(h.flangeDiaR!=null) o.dR=String(h.flangeDiaR);
+  setState(o);
+  location.href='index.html';
+}
+
+function colByKey(k){ return COLS.find(c=>c.k===k); }
+
+function render(){
+  const head=$('#head'); head.innerHTML='';
+  COLS.forEach(c=>{
+    const th=document.createElement('th'); if(c.l) th.className='l';
+    th.textContent=c.t;
+    if(sortKey===c.k){ const a=document.createElement('span'); a.className='ar'; a.textContent=sortDir>0?' ▲':' ▼'; th.appendChild(a); }
+    th.onclick=()=>{ if(sortKey===c.k) sortDir=-sortDir; else {sortKey=c.k; sortDir=1;} render(); };
+    head.appendChild(th);
+  });
+  head.appendChild(document.createElement('th'));
+
+  const ql=q.toLowerCase().trim();
+  let rows=DATA.filter(h=>{
+    if(pos && h.position!==pos) return false;
+    return !ql || (h.mfg+' '+h.model+' '+h.axle+' '+h.brake+' '+h.drive+' '+h.oln).toLowerCase().includes(ql);
+  });
+  const sc=colByKey(sortKey).s;
+  rows.sort((a,b)=>{
+    let x=sc(a), y=sc(b);
+    if(typeof x==='number'||typeof y==='number'){ x=x==null?-Infinity:x; y=y==null?-Infinity:y; return (x-y)*sortDir; }
+    return (''+x).localeCompare(''+y)*sortDir;
+  });
+
+  const tb=$('#rows'); tb.innerHTML='';
+  for(const h of rows){
+    const tr=document.createElement('tr');
+    COLS.forEach(c=>{ const td=document.createElement('td'); if(c.l) td.className='l'; td.innerHTML=c.f(h); tr.appendChild(td); });
+    const tu=document.createElement('td');
+    const b=document.createElement('button'); b.className='use'; b.textContent='use'; b.onclick=()=>useHub(h);
+    tu.appendChild(b); tr.appendChild(tu);
+    tb.appendChild(tr);
+  }
+  $('#count').textContent = rows.length+' of '+DATA.length+' hubs';
+}
+
+$('#q').addEventListener('input', e=>{ q=e.target.value; render(); });
+$('#pos').addEventListener('change', e=>{ pos=e.target.value; render(); });
+
+fetch('data/hubs.json').then(r=>r.json()).then(d=>{ DATA=d; render(); }).catch(()=>{ $('#err').hidden=false; });
+</script>
+</body>
+</html>

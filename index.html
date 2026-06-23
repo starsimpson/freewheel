@@ -32,7 +32,12 @@
   header p{margin:0; color:var(--muted); font-size:14px}
   header a{color:var(--accent); text-decoration:none}
   header a:hover{text-decoration:underline}
-  main{max-width:1180px; margin:0 auto; padding:8px 20px 60px;
+  nav.tabs{display:flex; gap:4px; border-bottom:1px solid var(--rule); max-width:1180px; margin:0 auto; padding:0 20px}
+  nav.tabs a{padding:8px 14px; font-size:14px; color:var(--muted); text-decoration:none;
+    border:1px solid transparent; border-bottom:none; border-radius:8px 8px 0 0; margin-bottom:-1px}
+  nav.tabs a:hover{color:var(--ink)}
+  nav.tabs a.on{color:var(--ink); font-weight:600; background:#fff; border-color:var(--rule)}
+  main{max-width:1180px; margin:0 auto; padding:16px 20px 60px;
     display:grid; grid-template-columns: 360px 1fr; gap:28px; align-items:start}
   @media (max-width:880px){ main{grid-template-columns:1fr} }
 
@@ -96,6 +101,11 @@
   <h1>Spokes</h1>
   <p>A bicycle spoke length calculator with crisp, to-scale diagrams — verify the dish and the lacing before you cut. In the spirit of the late, great <i>Freespoke</i>.</p>
 </header>
+<nav class="tabs">
+  <a href="index.html" class="on">Calculator</a>
+  <a href="rims.html">Rims</a>
+  <a href="hubs.html">Hubs</a>
+</nav>
 
 <main>
   <!-- ============ INPUTS ============ -->
@@ -594,18 +604,32 @@ function recalc(){
 
 // permalink (state in URL hash)
 function syncToHash(){
-  const v=read(); const p=new URLSearchParams();
+  const p=new URLSearchParams();
   for(const f of FIELDS) p.set(f, $(f).value);
   history.replaceState(null,'','#'+p.toString());
 }
 function loadFromHash(){
-  if(!location.hash) return;
+  if(!location.hash) return false;
   const p=new URLSearchParams(location.hash.slice(1));
-  for(const f of FIELDS) if(p.has(f)) $(f).value=p.get(f);
+  let any=false;
+  for(const f of FIELDS) if(p.has(f)){ $(f).value=p.get(f); any=true; }
+  return any;
+}
+// Persisted state, so picking a rim/hub on another tab carries back here.
+function saveState(){
+  const st={}; for(const f of FIELDS) st[f]=$(f).value;
+  try{ localStorage.setItem('spokes.state', JSON.stringify(st)); }catch(e){}
+}
+function loadState(){
+  let st=null; try{ st=JSON.parse(localStorage.getItem('spokes.state')||'null'); }catch(e){}
+  if(!st) return false;
+  let any=false;
+  for(const f of FIELDS) if(st[f]!=null){ $(f).value=st[f]; any=true; }
+  return any;
 }
 
 for(const f of FIELDS){
-  $(f).addEventListener('input', ()=>{ recalc(); syncToHash(); });
+  $(f).addEventListener('input', ()=>{ recalc(); syncToHash(); saveState(); });
 }
 $('permalink').addEventListener('click', e=>{
   e.preventDefault(); syncToHash();
@@ -613,8 +637,9 @@ $('permalink').addEventListener('click', e=>{
   e.target.textContent='Link copied!'; setTimeout(()=>e.target.textContent='Copy a shareable link →',1500);
 });
 
-loadFromHash();
-recalc();
+// A shared permalink wins; otherwise restore the last state (incl. rim/hub picks).
+if(!loadFromHash()) loadState();
+recalc(); syncToHash(); saveState();
 </script>
 </body>
 </html>
