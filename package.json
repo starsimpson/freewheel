@@ -1,0 +1,9 @@
+{
+  "name": "freewheel",
+  "version": "1.0.0",
+  "description": "A bicycle spoke length calculator with crisp, to-scale diagrams.",
+  "scripts": {
+    "test": "node tests/spoke.test.cjs"
+  },
+  "license": "MIT"
+}

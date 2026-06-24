@@ -30,6 +30,14 @@ python3 -m http.server 8770
 # then visit http://localhost:8770/
 ```
 
+The spoke math lives in `spokecalc.js` (no DOM, shared by the page and the tests).
+Run the test suite — regression fixtures plus a cross-check of every length against
+an independently-coded 3-D coordinate computation:
+
+```sh
+node tests/spoke.test.cjs   # or: npm test
+```
+
 ## Deploy
 
 Configured for [Render](https://render.com) as a static site via `render.yaml`.
