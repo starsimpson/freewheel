@@ -15,9 +15,9 @@ const near = (a, b, eps, msg) => ok(Math.abs(a - b) <= eps, `${msg}  (got ${a}, 
 
 // a complete input object with sensible defaults; override as needed
 const V = over => Object.assign({
-  erd: 602.3, erdTol: 0, oL: 0, oR: 0, sd: 2.6, sg: 2.0, nip: 12,
-  wL: 36, wR: 18, dL: 40.5, dR: 55, ft: 2.6, n: 32, xL: '0', xR: '3',
-  ho: 0, tension: 110, stretch: false, erdRaw: 602.3,
+  erd: 602.3, erdTol: 0, oL: 0, oR: 0, sd: 2.6, sg: 2.0, sgc: 2.0, headD: 3.8,
+  wL: 36, wR: 18, dL: 40.5, dR: 55, n: 32, xL: '0', xR: '3',
+  ho: 0, tension: 110, stretch: false,
 }, over || {});
 
 // ---- 1. regression fixtures (hand-verified) -------------------------------
@@ -48,13 +48,15 @@ ok(Math.abs(demo.L.tens - 100) < 1e-9 || Math.abs(demo.R.tens - 100) < 1e-9, 'on
   ok(cf.valid, "36h crow's foot is valid (18 / 3)");
   ok(!SC.compute(V({ n: 32, xR: 'cf3' })).valid, "32h crow's foot is flagged invalid (16 not /3)");
 }
-// stretch compensation shortens, by ~T*L/(E*A)
+// stretch compensation shortens, by the SIDE's own tension, using the centre gauge
 {
-  const dry = SC.side(V({ stretch: false }), 18, 55, 3, 1).len;
-  const wet = SC.side(V({ stretch: true }), 18, 55, 3, 1).len;
-  ok(wet < dry, 'stretch compensation shortens the spoke');
-  const expect = (110 * 9.80665) * dry / (200000 * Math.PI * 1 * 1);
-  near(dry - wet, expect, 0.02, 'stretch delta = T*L/(E*A)');
+  const dry = SC.compute(V({ stretch: false }));
+  const wet = SC.compute(V({ stretch: true }));
+  ok(wet.R.len < dry.R.len, 'stretch compensation shortens the spoke');
+  // right side is the 100% (tighter) side here
+  const expect = (110 * (wet.R.tens / 100) * 9.80665) * dry.R.lenGeo / (200000 * Math.PI * 1 * 1);
+  near(dry.R.len - wet.R.len, expect, 0.02, 'stretch delta = T_side * L / (E * A_centre)');
+  ok((dry.L.len - wet.L.len) < (dry.R.len - wet.R.len), 'lower-tension side stretches less');
 }
 // nipple adjustment is already in v.erd; uncertainty propagates ~0.5mm per 1mm ERD
 {
@@ -67,7 +69,7 @@ ok(Math.abs(demo.L.tens - 100) < 1e-9 || Math.abs(demo.R.tens - 100) < 1e-9, 'on
 {
   const coordLen = (v, w, d, x, sign) => {
     const R = v.erd / 2, r = d / 2, th = x * 720 / v.n * Math.PI / 180;
-    const f = Math.abs(w + sign * v.ho + (sign < 0 ? v.oL : v.oR));
+    const f = Math.abs(w + sign * v.ho - (sign < 0 ? v.oL : v.oR));
     // hub hole at angle 0, rim hole at angle theta, separated axially by f
     const dx = R * Math.cos(th) - r, dy = R * Math.sin(th), dz = f;
     return Math.hypot(dx, dy, dz) - v.sd / 2;

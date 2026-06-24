@@ -36,31 +36,25 @@
     // axial distance flange->nipple. Hub offset shifts hub toward +(right);
     // drilling offset moves this side's nipple outward (away from center).
     const o = (sign < 0) ? v.oL : v.oR;
-    const f = Math.abs(w + sign * v.ho + o);   // +o lengthens the axial run
+    const f = Math.abs(w + sign * v.ho - o);   // drilling offset moves the nipple toward its own flange
     const inPlane = Math.sqrt(R * R + r * r - 2 * R * r * Math.cos(th)); // chord in wheel plane
-    const lenGeo = Math.sqrt(inPlane * inPlane + f * f) - v.sd / 2;  // geometric (at tension)
-    // spoke-stretch compensation: at tension the spoke has elongated by
-    // dL = T*L/(E*A); the unstressed length to order/cut is that much shorter.
-    const area = Math.PI * (v.sg / 2) * (v.sg / 2);
-    const stretchDelta = (v.stretch && area > 0) ? (v.tension * KGF) * lenGeo / (E_STEEL * area) : 0;
-    const len = lenGeo - stretchDelta;
+    const lenGeo = Math.sqrt(inPlane * inPlane + f * f) - v.sd / 2;  // geometric; stretch applied later, per side
     const brace = Math.atan2(f, inPlane) * R2D;
-    // perpendicular distance from axle to the spoke line = effective tangential radius
+    // perpendicular distance from the axle to the spoke line
     const tang = (inPlane > 0) ? (R * r * Math.sin(th)) / inPlane : 0;
-    const exit = Math.asin(Math.min(1, tang / r)) * R2D;    // off-radial at hub
-    const wrap = Math.asin(Math.min(1, tang / R)) * R2D;     // off-radial at rim
+    const exit = Math.asin(Math.min(1, tang / r)) * R2D;    // off-radial at hub (90 = tangential)
+    const wrap = Math.asin(Math.min(1, tang / R)) * R2D;     // off-radial at rim (side view)
+    // total nipple misalignment: combine the in-plane wrap with the edge-on bracing
+    const total = Math.acos(Math.cos(wrap * D2R) * Math.cos(brace * D2R)) * R2D;
     // ---- spoke head clearance ----
-    // The binding interference is between this spoke's body and the head/elbow of
-    // its immediate crossing neighbour (one hole over). That neighbour heads the
-    // opposite way and its head sits on the OPPOSITE face of the flange, so the
-    // true gap is the 3-D distance: the in-plane perpendicular gap combined with
-    // the flange thickness, less the elbow keep-out (~one spoke gauge).
+    // The crossing neighbour one hole over has its head/elbow sitting at its hole.
+    // Treat both as circles in the flange plane: clearance = (perpendicular distance
+    // from that hole to this spoke's line) - (head radius) - (this spoke's elbow radius).
+    // We do NOT credit flange thickness — adjacent heads can foul across the flange.
     const phi = (720 / v.n) * D2R;       // angular hole spacing on the flange
-    const p = tang;                      // perpendicular dist. axle -> spoke line
-    const gap = p * (Math.cos(phi) - 1) + Math.sqrt(Math.max(0, r * r - p * p)) * Math.sin(phi);
-    const t = v.ft, hr = v.sg;           // flange thickness, elbow keep-out radius
-    const clr = Math.sqrt(gap * gap + t * t) - hr;
-    return { R, r, theta, th, f, inPlane, len, lenGeo, stretchDelta, brace, tang, exit, wrap, gap, clr, x };
+    const gapLine = tang * (Math.cos(phi) - 1) + Math.sqrt(Math.max(0, r * r - tang * tang)) * Math.sin(phi);
+    const clr = gapLine - (v.headD || 0) / 2 - (v.sg || 0) / 2;
+    return { R, r, theta, th, f, inPlane, lenGeo, len: lenGeo, brace, tang, exit, wrap, total, gapLine, clr, x };
   }
 
   // spoke groups (each its own length); crow's foot = radial + crossed
@@ -123,6 +117,19 @@
     const invL = 1 / sL, invR = 1 / sR, mx = Math.max(invL, invR);
     L.tens = 100 * invL / mx;
     Rt.tens = 100 * invR / mx;
+    // spoke-stretch compensation (optional): each side stretches by its OWN tension
+    // share (not the full build tension), and a spoke elongates in its thin centre
+    // section -> use the centre gauge. dL = T*L/(E*A); cut the spoke that much shorter.
+    const areaC = Math.PI * (v.sgc / 2) * (v.sgc / 2);
+    [L, Rt].forEach(s => {
+      const Tn = v.stretch ? (v.tension * (s.tens / 100) * KGF) : 0;   // newtons on this side
+      s.groups.forEach(g => {
+        g.stretchDelta = (Tn > 0 && areaC > 0) ? Tn * g.lenGeo / (E_STEEL * areaC) : 0;
+        g.len = g.lenGeo - g.stretchDelta;
+      });
+      const prim = s.groups.reduce((a, b) => b.x > a.x ? b : a, s.groups[0]);
+      s.len = prim.len; s.stretchDelta = prim.stretchDelta;
+    });
     return { L, R: Rt, valid: L.valid && Rt.valid };
   }
 
