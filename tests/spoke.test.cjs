@@ -15,7 +15,7 @@ const near = (a, b, eps, msg) => ok(Math.abs(a - b) <= eps, `${msg}  (got ${a}, 
 
 // a complete input object with sensible defaults; override as needed
 const V = over => Object.assign({
-  erd: 602.3, erdTol: 0, oL: 0, oR: 0, sd: 2.6, sg: 2.0, sgc: 2.0, headD: 3.8,
+  erd: 602.3, oL: 0, oR: 0, sd: 2.6, sg: 2.0, sgc: 2.0, headD: 3.8,
   wL: 36, wR: 18, dL: 40.5, dR: 55, n: 32, xL: '0', xR: '3',
   ho: 0, tension: 110, stretch: false,
 }, over || {});
@@ -58,11 +58,13 @@ ok(Math.abs(demo.L.tens - 100) < 1e-9 || Math.abs(demo.R.tens - 100) < 1e-9, 'on
   near(dry.R.len - wet.R.len, expect, 0.02, 'stretch delta = T_side * L / (E * A_centre)');
   ok((dry.L.len - wet.L.len) < (dry.R.len - wet.R.len), 'lower-tension side stretches less');
 }
-// nipple adjustment is already in v.erd; uncertainty propagates ~0.5mm per 1mm ERD
+// total angle at rim combines wrap and bracing in 3-D
 {
-  const u = SC.compute(V({ erdTol: 1 }));
-  near(u.R.groups[0].lenTol, 0.5, 0.1, 'ERD ±1 mm -> ~±0.5 mm on length');
-  ok(SC.compute(V({ erdTol: 0 })).R.groups[0].lenTol === 0, 'no tolerance -> no band');
+  const c = SC.compute(V());
+  const w = c.R.wrap, b = c.R.brace;
+  const expect = Math.acos(Math.cos(w * Math.PI / 180) * Math.cos(b * Math.PI / 180)) * 180 / Math.PI;
+  near(c.R.total, expect, 1e-9, 'total angle = acos(cos wrap * cos bracing)');
+  ok(c.R.total >= c.R.wrap && c.R.total >= c.R.brace, 'total angle >= both components');
 }
 
 // ---- 3. cross-validation: law of cosines vs independent 3-D coordinates ----

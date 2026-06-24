@@ -63,6 +63,7 @@
   <a href="rims.html">Rims</a>
   <a href="hubs.html" class="on">Hubs</a>
   <a href="measure.html">Measure</a>
+  <a href="bench.html">Bench</a>
 </nav>
 <main>
   <div class="bar">
@@ -79,6 +80,7 @@
   <div id="err" class="err" hidden>Could not load the hub data. Serve this over http (not file://).</div>
 </main>
 
+<script src="bench.js"></script>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
@@ -158,9 +160,17 @@ function render(){
   for(const h of rows){
     const tr=document.createElement('tr');
     COLS.forEach(c=>{ const td=document.createElement('td'); if(c.l) td.className='l'; td.innerHTML=c.f(h); tr.appendChild(td); });
-    const tu=document.createElement('td');
+    const tu=document.createElement('td'); tu.style.whiteSpace='nowrap';
+    const ab=document.createElement('button'); ab.className='use';
+    ab.style.cssText='margin-right:6px;border-color:var(--rule);color:var(--ink)';
+    const onBench=Bench.hasHub(h);
+    ab.textContent = onBench ? 'on bench' : '+ bench'; ab.disabled = onBench;
+    ab.onclick=()=>{ Bench.addHub({mfg:h.mfg,model:h.model,position:h.position,oln:h.oln,axle:h.axle,brake:h.brake,
+      drive:h.drive,flangeDiaL:h.flangeDiaL,flangeDiaR:h.flangeDiaR,flangeOffL:h.flangeOffL,flangeOffR:h.flangeOffR,
+      midFlangeOffset:h.midFlangeOffset,weight:h.weight,src:'fs'});
+      ab.textContent='on bench'; ab.disabled=true; };
     const b=document.createElement('button'); b.className='use'; b.textContent='use'; b.onclick=()=>useHub(h);
-    tu.appendChild(b); tr.appendChild(tu);
+    tu.appendChild(ab); tu.appendChild(b); tr.appendChild(tu);
     tb.appendChild(tr);
   }
   $('#count').textContent = rows.length+' of '+DATA.length+' hubs';

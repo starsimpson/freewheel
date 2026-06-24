@@ -68,16 +68,8 @@
     } else {
       defs = [{ label: pat.cross === 0 ? 'radial' : pat.cross + '×', cross: pat.cross, count: nf }];
     }
-    const groups = defs.map(g => {
-      const m = Object.assign(side(v, w, d, g.cross, sign), { label: g.label, count: g.count });
-      // uncertainty: propagate the ERD tolerance through the actual formula
-      if (v.erdTol > 0) {
-        const hi = side(Object.assign({}, v, { erd: v.erd + v.erdTol }), w, d, g.cross, sign).len;
-        const lo = side(Object.assign({}, v, { erd: v.erd - v.erdTol }), w, d, g.cross, sign).len;
-        m.lenTol = Math.abs(hi - lo) / 2;
-      } else m.lenTol = 0;
-      return m;
-    });
+    const groups = defs.map(g =>
+      Object.assign(side(v, w, d, g.cross, sign), { label: g.label, count: g.count }));
     return { groups, valid };
   }
 

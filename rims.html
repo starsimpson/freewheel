@@ -63,6 +63,7 @@
   <a href="rims.html" class="on">Rims</a>
   <a href="hubs.html">Hubs</a>
   <a href="measure.html">Measure</a>
+  <a href="bench.html">Bench</a>
 </nav>
 <main>
   <div class="bar">
@@ -78,6 +79,7 @@
   <div id="err" class="err" hidden>Could not load the rim data. Serve this over http (not file://).</div>
 </main>
 
+<script src="bench.js"></script>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
@@ -116,8 +118,6 @@ function loadStateSet(field, value){
 }
 function useRim(r){
   loadStateSet('erd', r.erd);          // ERD is the unambiguous value a rim contributes
-  // catalogue ERD is unverified — hand the calculator a ~1 mm uncertainty band
-  loadStateSet('erdTol', r.src==='measured' ? 0 : 1);
   location.href = 'index.html';
 }
 
@@ -148,9 +148,17 @@ function render(){
       const td=document.createElement('td'); if(c.l) td.className='l';
       td.innerHTML=c.f(r); tr.appendChild(td);
     });
-    const tu=document.createElement('td');
+    const tu=document.createElement('td'); tu.style.whiteSpace='nowrap';
+    const ab=document.createElement('button'); ab.className='use';
+    ab.style.cssText='margin-right:6px;border-color:var(--rule);color:var(--ink)';
+    const onBench=Bench.hasRim(r);
+    ab.textContent = onBench ? 'on bench' : '+ bench'; ab.disabled = onBench;
+    ab.onclick=()=>{ Bench.addRim({mfg:r.mfg,model:r.model,iso:r.iso,erd:r.erd,offsetDrilling:r.offsetDrilling,
+      offsetAvg:r.offsetAvg,outerWidth:r.outerWidth,innerWidth:r.innerWidth,height:r.height,weight:r.weight,src:'fs'});
+      ab.textContent='on bench'; ab.disabled=true; };
     const b=document.createElement('button'); b.className='use'; b.textContent='use';
-    b.onclick=()=>useRim(r); tu.appendChild(b); tr.appendChild(tu);
+    b.onclick=()=>useRim(r);
+    tu.appendChild(ab); tu.appendChild(b); tr.appendChild(tu);
     tb.appendChild(tr);
   }
   $('#count').textContent = rows.length+' of '+DATA.length+' rims';

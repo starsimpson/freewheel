@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Bench — Spokes</title>
+<meta name="description" content="Your personal workbench of rims and hubs — saved on this device only — to compare options in the spoke calculator without re-entering data."/>
+<style>
+  :root{
+    --bg:#fff; --ink:#1a1a1a; --muted:#6b7280; --rule:#d9d9d9; --accent:#1f4fd6;
+    --accentbg:#eef3ff; --field:#fafafa; --warn:#c81e1e; --amber:#9a6700; --amberbg:#fdf6e7;
+    --mono:"SFMono-Regular",ui-monospace,"DejaVu Sans Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  header{padding:22px 20px 0; max-width:1180px; margin:0 auto}
+  header h1{font-size:24px; margin:0 0 2px; letter-spacing:-.01em}
+  header p{margin:0 0 12px; color:var(--muted); font-size:14px}
+  nav.tabs{display:flex; gap:4px; border-bottom:1px solid var(--rule); max-width:1180px; margin:0 auto; padding:0 20px}
+  nav.tabs a{padding:8px 14px; font-size:14px; color:var(--muted); text-decoration:none;
+    border:1px solid transparent; border-bottom:none; border-radius:8px 8px 0 0; margin-bottom:-1px}
+  nav.tabs a:hover{color:var(--ink)}
+  nav.tabs a.on{color:var(--ink); font-weight:600; background:#fff; border-color:var(--rule)}
+  main{max-width:1180px; margin:0 auto; padding:18px 20px 60px; display:grid; gap:20px}
+  .banner{background:var(--amberbg); border:1px solid #f0e0b8; color:var(--amber);
+    border-radius:9px; padding:12px 14px; font-size:13px; display:flex; gap:10px; align-items:flex-start}
+  .banner b{color:#7a5200}
+  .banner svg{flex:0 0 auto; margin-top:1px}
+  .panel{border:1px solid var(--rule); border-radius:10px; padding:16px}
+  .panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 10px;
+    display:flex; justify-content:space-between; align-items:center}
+  table{width:100%; border-collapse:collapse; font-size:13px}
+  thead th{text-align:left; padding:5px 7px; border-bottom:1px solid var(--rule); font-size:10px;
+    text-transform:uppercase; letter-spacing:.04em; color:var(--muted); white-space:nowrap}
+  tbody td{padding:3px 5px; border-bottom:1px solid #f0f0f0}
+  tbody input, tbody select{font:13px var(--mono); padding:5px 6px; border:1px solid transparent;
+    border-radius:5px; background:transparent; width:100%; min-width:48px}
+  tbody input:hover, tbody select:hover{border-color:var(--rule)}
+  tbody input:focus, tbody select:focus{outline:none; border-color:var(--accent); background:#fff}
+  tbody input.txt{min-width:90px}
+  tbody input.num{text-align:right; min-width:56px}
+  .src{font:600 10px/1.4 var(--mono); padding:1px 6px; border-radius:9px; background:#eef0f3; color:#586173}
+  .src.you{background:#e7f6ec; color:#0a7d33}
+  .del{border:none; background:none; color:#bbb; cursor:pointer; font-size:16px; padding:2px 6px; border-radius:5px}
+  .del:hover{color:var(--warn); background:#fbeaea}
+  .btn{font:13px var(--mono); padding:6px 12px; border:1px solid var(--accent); color:var(--accent);
+    background:#fff; border-radius:7px; cursor:pointer}
+  .btn:hover{background:var(--accent); color:#fff}
+  .btn.ghost{border-color:var(--rule); color:var(--ink)}
+  .btn.ghost:hover{background:#f3f3f3; color:var(--ink)}
+  .empty{color:var(--muted); font-size:13px; padding:8px 2px}
+  .io{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+  @media (max-width:760px){ .io{grid-template-columns:1fr} }
+  textarea{width:100%; height:150px; font:12px var(--mono); padding:10px; border:1px solid var(--rule);
+    border-radius:8px; background:var(--field); resize:vertical}
+  .row{display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap}
+  .msg{font-size:12px}
+  .msg.err{color:var(--warn)} .msg.ok{color:#0a7d33}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Spokes</h1>
+  <p>Your bench — a shortlist of rims and hubs to compare on the calculator without re-typing.</p>
+</header>
+<nav class="tabs">
+  <a href="index.html">Calculator</a>
+  <a href="rims.html">Rims</a>
+  <a href="hubs.html">Hubs</a>
+  <a href="measure.html">Measure</a>
+  <a href="bench.html" class="on">Bench</a>
+</nav>
+<main>
+  <div class="banner">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5 15 14H1L8 1.5Zm0 3.2L3.2 13h9.6L8 4.7Zm-.8 2.8h1.6v3H7.2v-3Zm0 4h1.6V13H7.2v-1.5Z"/></svg>
+    <div><b>This bench is stored only in this browser, on this device.</b> It isn't synced to an account
+    or backed up anywhere. If you clear your browser data or switch devices it's gone — use
+    <b>Export</b> below to keep a copy. Nothing here leaves your machine.</div>
+  </div>
+
+  <div class="panel">
+    <h2>Rims <button class="btn ghost" id="addRim">+ add rim</button></h2>
+    <div id="rimWrap"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Hubs <button class="btn ghost" id="addHub">+ add hub</button></h2>
+    <div id="hubWrap"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Export / Import <span style="font-weight:400;text-transform:none;letter-spacing:0">plain, hand-editable JSON</span></h2>
+    <div class="io">
+      <div>
+        <textarea id="exp" readonly></textarea>
+        <div class="row"><button class="btn ghost" id="copyExp">Copy</button>
+          <span class="msg" id="copyMsg"></span></div>
+      </div>
+      <div>
+        <textarea id="imp" placeholder='Paste bench JSON here:&#10;{ "rims": [ … ], "hubs": [ … ] }'></textarea>
+        <div class="row">
+          <button class="btn" id="impReplace">Import (replace)</button>
+          <button class="btn ghost" id="impMerge">Import (merge)</button>
+          <span class="msg" id="impMsg"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="bench.js"></script>
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+
+// column specs: key, label, type ('text'|'num'|'int'|'pos')
+const RIM_COLS = [
+  ['mfg','Manufacturer','text'],['model','Model','text'],['iso','ISO','int'],['erd','ERD','num'],
+  ['outerWidth','Outer W','num'],['innerWidth','Inner W','num'],['weight','Weight','text'],
+];
+const HUB_COLS = [
+  ['mfg','Manufacturer','text'],['model','Model','text'],['position','Position','pos'],['oln','OLN','int'],
+  ['flangeDiaL','Flange Ø L','num'],['flangeDiaR','Flange Ø R','num'],
+  ['flangeOffL','Offset L','num'],['flangeOffR','Offset R','num'],['weight','Weight','text'],
+];
+
+function parseVal(type, raw){
+  if(type==='text'||type==='pos') return raw;
+  if(raw==='') return null;
+  const n = (type==='int') ? parseInt(raw,10) : parseFloat(raw);
+  return isNaN(n) ? null : n;
+}
+
+function renderTable(wrap, cols, items, kind){
+  if(!items.length){ wrap.innerHTML = `<div class="empty">No ${kind}s yet. Add one above, or use “+ bench” on the Rims / Hubs pages.</div>`; return; }
+  const head = '<tr>' + cols.map(c=>`<th>${c[1]}</th>`).join('') + '<th>Source</th><th></th></tr>';
+  const rows = items.map(it => '<tr>' + cols.map(c=>{
+    const [key,,type]=c;
+    const val = it[key]==null ? '' : it[key];
+    if(type==='pos'){
+      return `<td><select data-id="${it.id}" data-key="${key}">`+
+        ['Front','Rear'].map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')+`</select></td>`;
+    }
+    const cls = (type==='text') ? 'txt' : 'num';
+    return `<td><input class="${cls}" data-id="${it.id}" data-key="${key}" data-type="${type}" value="${String(val).replace(/"/g,'&quot;')}"></td>`;
+  }).join('') + `<td><span class="src ${it.src==='you'?'you':''}">${it.src==='you'?'Yours':'Catalogue'}</span></td>`
+    + `<td><button class="del" data-id="${it.id}" title="delete">×</button></td></tr>`).join('');
+  wrap.innerHTML = `<table><thead>${head}</thead><tbody>${rows}</tbody></table>`;
+}
+
+function refresh(){
+  const b = Bench.load();
+  renderTable($('#rimWrap'), RIM_COLS, b.rims, 'rim');
+  renderTable($('#hubWrap'), HUB_COLS, b.hubs, 'hub');
+  $('#exp').value = Bench.exportJSON();
+}
+
+// live edit: any input/select change writes straight to the bench
+function onEdit(e){
+  const el = e.target;
+  const id = el.getAttribute('data-id'); const key = el.getAttribute('data-key');
+  if(!id || !key) return;
+  const type = el.getAttribute('data-type') || (el.tagName==='SELECT' ? 'pos' : 'text');
+  const patch = {}; patch[key] = parseVal(type, el.value);
+  const isRim = !!Bench.load().rims.find(r=>r.id===id);
+  (isRim ? Bench.updateRim : Bench.updateHub)(id, patch);
+  $('#exp').value = Bench.exportJSON();
+}
+function onDelete(e){
+  const btn = e.target.closest('.del'); if(!btn) return;
+  const id = btn.getAttribute('data-id');
+  if(Bench.load().rims.find(r=>r.id===id)) Bench.removeRim(id); else Bench.removeHub(id);
+  refresh();
+}
+document.addEventListener('input', onEdit);
+document.addEventListener('change', onEdit);
+document.addEventListener('click', onDelete);
+
+$('#addRim').addEventListener('click', ()=>{ Bench.addRim({mfg:'',model:'',iso:622,erd:null,src:'you'}); refresh(); });
+$('#addHub').addEventListener('click', ()=>{ Bench.addHub({mfg:'',model:'',position:'Rear',oln:142,flangeDiaL:null,flangeDiaR:null,flangeOffL:null,flangeOffR:null,src:'you'}); refresh(); });
+
+$('#copyExp').addEventListener('click', ()=>{
+  navigator.clipboard?.writeText($('#exp').value);
+  $('#copyMsg').textContent='Copied.'; $('#copyMsg').className='msg ok';
+  setTimeout(()=>$('#copyMsg').textContent='',1500);
+});
+function doImport(mode){
+  const msg = $('#impMsg');
+  try{
+    Bench.importJSON($('#imp').value, mode);
+    refresh(); $('#imp').value='';
+    msg.textContent = 'Imported ('+mode+').'; msg.className='msg ok';
+  }catch(err){ msg.textContent = err.message; msg.className='msg err'; }
+  setTimeout(()=>{ if(msg.className.includes('ok')) msg.textContent=''; }, 2500);
+}
+$('#impReplace').addEventListener('click', ()=>doImport('replace'));
+$('#impMerge').addEventListener('click', ()=>doImport('merge'));
+
+refresh();
+</script>
+</body>
+</html>
