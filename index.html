@@ -622,9 +622,11 @@ for(const f of [...FIELDS,...BOOLS]){
   $(f).addEventListener('input', ()=>{ recalc(); syncToHash(); saveState(); });
   $(f).addEventListener('change', ()=>{ recalc(); syncToHash(); saveState(); });
 }
-$('permalink').addEventListener('click', e=>{
+$('permalink').addEventListener('click', async e=>{
   e.preventDefault(); syncToHash();
-  navigator.clipboard?.writeText(location.href);
+  const url=location.href;
+  if(navigator.share){ try{ await navigator.share({title:'Spoke build', url}); return; }catch(_){} }
+  try{ await navigator.clipboard.writeText(url); }catch(_){}
   e.target.textContent='Link copied!'; setTimeout(()=>e.target.textContent='Copy a shareable link →',1500);
 });
 

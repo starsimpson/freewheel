@@ -102,6 +102,7 @@
       <div>
         <textarea id="exp" readonly></textarea>
         <div class="row"><button class="btn ghost" id="copyExp">Copy</button>
+          <button class="btn ghost" id="shareLink">Copy share link</button>
           <span class="msg" id="copyMsg"></span></div>
       </div>
       <div>
@@ -205,7 +206,29 @@ function doImport(mode){
 $('#impReplace').addEventListener('click', ()=>doImport('replace'));
 $('#impMerge').addEventListener('click', ()=>doImport('merge'));
 
+// share the bench as a no-account link (encodes the JSON in the URL)
+$('#shareLink').addEventListener('click', ()=>{
+  const url = location.origin + location.pathname + '#b=' + encodeURIComponent(JSON.stringify(Bench.load()));
+  const m = $('#copyMsg');
+  if(url.length > 8000){ m.textContent='Bench too large to share by link — use Copy instead.'; m.className='msg err'; return; }
+  navigator.clipboard?.writeText(url);
+  m.textContent='Share link copied. Opening it offers an import.'; m.className='msg ok';
+  setTimeout(()=>{ m.textContent=''; }, 2500);
+});
+
 refresh();
+
+// if opened from a share link, load it into the import box for review
+(function(){
+  const m = location.hash.match(/[#&]b=([^&]+)/);
+  if(!m) return;
+  try{
+    const data = JSON.parse(decodeURIComponent(m[1]));
+    $('#imp').value = JSON.stringify(data, null, 2);
+    const msg = $('#impMsg'); msg.textContent = 'Shared bench loaded below — choose Import (replace) or (merge).'; msg.className='msg ok';
+    history.replaceState(null, '', location.pathname);
+  }catch(e){}
+})();
 
 // ---- optional cloud login + sync ----
 function renderAccount(u){
