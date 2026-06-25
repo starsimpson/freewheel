@@ -17,7 +17,7 @@ const near = (a, b, eps, msg) => ok(Math.abs(a - b) <= eps, `${msg}  (got ${a}, 
 const V = over => Object.assign({
   erd: 602.3, oL: 0, oR: 0, sd: 2.6, sg: 2.0, sgc: 2.0, headD: 3.8,
   wL: 36, wR: 18, dL: 40.5, dR: 55, n: 32, xL: '0', xR: '3',
-  ho: 0, tension: 110, stretch: false,
+  ho: 0, tension: 110, stretch: false, spStyle: 'jbend', triplet: false,
 }, over || {});
 
 // ---- 1. regression fixtures (hand-verified) -------------------------------
@@ -31,12 +31,31 @@ near(demo.L.tens, 48, 1.0, 'demo: left side ~48% of right');
 // ---- 2. properties --------------------------------------------------------
 // radial spoke is exactly sqrt((R-r)^2 + f^2) - hole/2
 {
-  const s = SC.side(V(), 36, 40.5, 0, -1);
+  const s = SC.side(V(), 36, 40.5, 0, -1, 16);
   const R = 602.3 / 2, r = 40.5 / 2, f = 36;
   near(s.lenGeo, Math.hypot(R - r, f) - 2.6 / 2, 1e-9, 'radial closed form');
 }
 // more cross -> longer spoke
-ok(SC.side(V(), 18, 55, 3, 1).lenGeo > SC.side(V(), 18, 55, 0, 1).lenGeo, 'more cross -> longer spoke');
+ok(SC.side(V(), 18, 55, 3, 1, 16).lenGeo > SC.side(V(), 18, 55, 0, 1, 16).lenGeo, 'more cross -> longer spoke');
+// straight-pull omits the J-bend half-hole, so it reads longer by exactly sd/2
+{
+  const jb = SC.side(V({ spStyle: 'jbend' }), 18, 55, 3, 1, 16).lenGeo;
+  const sp = SC.side(V({ spStyle: 'sp' }), 18, 55, 3, 1, 16).lenGeo;
+  near(sp - jb, 2.6 / 2, 1e-9, 'straight-pull = J-bend + ½ hole');
+}
+// 2:1 triplet: drive (right) gets 2/3 of spokes, non-drive 1/3, heavy side runs slacker
+{
+  const t = SC.compute(V({ n: 24, triplet: true, xL: '1', xR: '3' }));
+  near(t.R.nf, 16, 1e-9, '24h 2:1 -> 16 drive spokes');
+  near(t.L.nf, 8, 1e-9, '24h 2:1 -> 8 non-drive spokes');
+  near(t.R.theta, 3 * 360 / 16, 1e-9, 'drive theta uses its own spoke count');
+  ok(t.valid, '24h 2:1 is valid (24 / 6)');
+  ok(!SC.compute(V({ n: 28, triplet: true })).valid, '28h 2:1 is flagged invalid (28 not /6)');
+  // 2:1 evens out per-spoke tension: the low side's share is higher than at 1:1
+  const nonTrip = SC.compute(V({ n: 24, xL: '1', xR: '3' }));
+  ok(Math.min(t.L.tens, t.R.tens) > Math.min(nonTrip.L.tens, nonTrip.R.tens),
+     '2:1 raises the low-side tension share vs the same dish at 1:1');
+}
 // one side is always pinned at exactly 100%
 ok(Math.abs(demo.L.tens - 100) < 1e-9 || Math.abs(demo.R.tens - 100) < 1e-9, 'one side pinned at 100%');
 // crow's foot yields two groups with the right split, and validates the spoke count
@@ -69,8 +88,8 @@ ok(Math.abs(demo.L.tens - 100) < 1e-9 || Math.abs(demo.R.tens - 100) < 1e-9, 'on
 
 // ---- 3. cross-validation: law of cosines vs independent 3-D coordinates ----
 {
-  const coordLen = (v, w, d, x, sign) => {
-    const R = v.erd / 2, r = d / 2, th = x * 720 / v.n * Math.PI / 180;
+  const coordLen = (v, w, d, x, sign, nf) => {
+    const R = v.erd / 2, r = d / 2, th = x * 360 / nf * Math.PI / 180;
     const f = Math.abs(w + sign * v.ho - (sign < 0 ? v.oL : v.oR));
     // hub hole at angle 0, rim hole at angle theta, separated axially by f
     const dx = R * Math.cos(th) - r, dy = R * Math.sin(th), dz = f;
@@ -85,8 +104,8 @@ ok(Math.abs(demo.L.tens - 100) < 1e-9 || Math.abs(demo.R.tens - 100) < 1e-9, 'on
       oL: (Math.random() - 0.5) * 6, oR: (Math.random() - 0.5) * 6,
     });
     const w = 12 + Math.random() * 30, d = 28 + Math.random() * 32;
-    const x = Math.floor(Math.random() * 5), sign = (i % 2) ? 1 : -1;
-    maxErr = Math.max(maxErr, Math.abs(SC.side(v, w, d, x, sign).lenGeo - coordLen(v, w, d, x, sign)));
+    const x = Math.floor(Math.random() * 5), sign = (i % 2) ? 1 : -1, nf = v.n / 2;
+    maxErr = Math.max(maxErr, Math.abs(SC.side(v, w, d, x, sign, nf).lenGeo - coordLen(v, w, d, x, sign, nf)));
   }
   near(maxErr, 0, 1e-9, 'closed form == 3-D coordinate length over 5000 random wheels');
 }

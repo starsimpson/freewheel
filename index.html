@@ -159,6 +159,11 @@
         <input id="sg" class="single" type="number" step="0.1" min="0" value="2.0" style="width:158px">
         <div class="lab">Gauge at centre <small>thin section, mm — for stretch</small></div>
         <input id="sgc" class="single" type="number" step="0.1" min="0" value="1.8" style="width:158px">
+        <div class="lab">Spoke style <small>straight-pull omits the ½-hole</small></div>
+        <select id="spStyle" class="single" style="width:158px">
+          <option value="jbend">J-bend</option>
+          <option value="sp">Straight-pull</option>
+        </select>
       </div>
     </div>
 
@@ -190,6 +195,8 @@
         <input id="tension" class="single" type="number" step="5" value="110" style="width:158px">
         <div class="lab">Rim-angle warn <small>total angle at rim red above, °</small></div>
         <input id="totalWarn" class="single" type="number" step="0.5" min="0" value="6" style="width:158px">
+        <div class="lab">2:1 triplet <small>right (drive) gets 2× the spokes</small></div>
+        <label class="single" style="justify-self:start; font:13px var(--mono); display:flex; gap:7px; align-items:center"><input id="triplet" type="checkbox" style="width:auto"> 2:1 lacing</label>
         <div class="lab">Spoke stretch <small>cut shorter by elongation at tension</small></div>
         <label class="single" style="justify-self:start; font:13px var(--mono); display:flex; gap:7px; align-items:center"><input id="stretch" type="checkbox" style="width:auto"> compensate</label>
       </div>
@@ -290,15 +297,21 @@
     crow's foot it's computed on the crossed spokes.</p>
 
     <h4 style="margin:14px 0 4px">Lacing patterns</h4>
-    <p>Length depends only on each spoke's <code>θ</code>, so a pattern is fully described by the
-    set of crossings it uses. We support <b>radial (0×) through 5-cross</b> (one length), and
-    <b>crow's foot</b> — a repeating radial + crossed group that yields <i>two</i> lengths and
-    needs the spokes-per-side divisible by&nbsp;3 (24/36/48h). Decorative names like
-    <i>snowflake</i> are rearrangements that reduce to one of these for length purposes.
-    <b>Triplet</b> (2:1 lacing) and <b>straight-pull</b> hubs aren't modelled yet: 2:1 spaces the
-    rim holes unevenly so the wrap angle isn't the simple formula, and straight-pull length depends
-    on each hub's own hole geometry. Both need part-specific, validated math — we'd rather omit them
-    than ship a length we can't stand behind.</p>
+    <p>Each spoke's angle at the axle is <code>θ = crosses × 360 / (spokes on that flange)</code>.
+    We support <b>radial (0×) through 5-cross</b> (one length), <b>crow's foot</b> — a repeating
+    radial + crossed group that yields <i>two</i> lengths and needs the spokes-per-side divisible
+    by&nbsp;3 (24/36/48h) — and <b>2:1 "triplet"</b>, where the drive (right) flange carries twice
+    the spokes of the other. In 2:1 each flange uses its <i>own</i> spoke count for θ and for the
+    tension balance (so the heavy side runs slacker — the whole point of the pattern); it needs the
+    total divisible by&nbsp;6. <i>Honest caveat:</i> real 2:1 spaces the rim holes slightly
+    unevenly, so true lengths can sit a fraction of a millimetre off the even-distribution value we
+    report.</p>
+
+    <h4 style="margin:14px 0 4px">Straight-pull hubs</h4>
+    <p>Set <b>Spoke style → straight-pull</b> and we drop the ½-hole term, since a straight-pull
+    head seats in the flange hole instead of wrapping a J-bend elbow around it. Straight-pull
+    geometry varies by hub, so treat this as first-order and use the maker's own flange figures
+    when you have them.</p>
 
     </div>
   </details>
@@ -310,7 +323,7 @@
   saved this data so it could live on.</p>
 </div>
 
-<script src="spokecalc.js?v=3"></script>
+<script src="spokecalc.js?v=4"></script>
 <script src="bench.js"></script>
 <script>
 "use strict";
@@ -319,19 +332,21 @@ const SVGNS = "http://www.w3.org/2000/svg";
 // the pure math lives in spokecalc.js (shared with the test suite)
 const { D2R, R2D, compute } = SpokeCalc;
 
-const FIELDS = ["erd","oL","oR","sd","sg","sgc","headD","wL","wR","dL","dR","n","xL","xR","ho","tension","totalWarn"];
+const FIELDS = ["erd","oL","oR","sd","sg","sgc","headD","wL","wR","dL","dR","n","xL","xR","spStyle","ho","tension","totalWarn"];
+const STRINGS = ["xL","xR","spStyle"];        // selects read as strings
+const BOOLS = ["stretch","triplet"];          // checkboxes
 
 // ---- read inputs ----
 function read(){
   const v = {};
   for(const f of FIELDS){
-    if(f==='xL' || f==='xR') v[f] = $(f).value;          // pattern code (string)
+    if(STRINGS.includes(f)) v[f] = $(f).value;
     else v[f] = parseFloat($(f).value) || 0;
   }
   v.n = Math.max(8, Math.round(v.n));
   for(const k of ['erd','dL','dR']) v[k] = Math.max(0.1, v[k]);   // diameters must be positive
   for(const k of ['sd','sg','sgc','headD']) v[k] = Math.max(0, v[k]);
-  v.stretch = $('stretch').checked;
+  for(const b of BOOLS) v[b] = $(b).checked;
   return v;
 }
 
@@ -368,8 +383,9 @@ function renderResults(v, c){
   const totCls = a => (v.totalWarn>0 && a>v.totalWarn) ? 'warn' : '';
   put('r_total_L', fmt(c.L.total,1)+'°', totCls(c.L.total));
   put('r_total_R', fmt(c.R.total,1)+'°', totCls(c.R.total));
-  $('patwarn').textContent = c.valid ? '' :
-    "Crow's foot needs the spokes-per-side divisible by 3 — use 24, 36, or 48 spokes. Lengths assume an even split.";
+  $('patwarn').textContent = c.valid ? '' : (v.triplet
+    ? "2:1 triplet needs the spoke count divisible by 6 — use 24, 36, or 48."
+    : "Crow's foot needs the spokes-per-side divisible by 3 — use 24, 36, or 48 spokes.");
   // advisory: stretch compensation (per side, using the centre gauge)
   $('advnote').textContent = v.stretch
     ? `Cut shorter for spoke stretch at ${v.tension} kgf (centre gauge ${v.sgc} mm): left −${fmt(c.L.stretchDelta,1)} mm, right −${fmt(c.R.stretchDelta,1)} mm.`
@@ -472,12 +488,12 @@ function drawDish(v,c){
 // =========================================================
 function drawLacing(svgId, capId, v, sd, sideName){
   const svg=$(svgId); clear(svg);
-  $(capId).textContent = sd.label+' · '+(v.n/2)+' spokes';
+  $(capId).textContent = sd.label+' · '+sd.nf+' spokes';
   const W=320,H=330, cx=W/2, cy=H/2+8;
   const R=v.erd/2, r=sd.r;
   const RR=(Math.min(W,H)/2 - 16);          // fit rim to box
   const s=RR/R, rr=r*s;
-  const half=v.n/2, holeStep=360/half, plan=sd.plan;
+  const half=sd.nf, holeStep=360/half, plan=sd.plan;
 
   svg.appendChild(el('circle',{cx,cy,r:RR, fill:'none', stroke:'#e3e3e3','stroke-width':1}));
   svg.appendChild(el('circle',{cx,cy,r:rr+5*s+2, fill:'#f4f4f4', stroke:'#bbb','stroke-width':1}));
@@ -511,7 +527,7 @@ function drawHubDetail(svgId, v, sd, viewR){
   // both flanges share the SAME scale (passed in) so they're directly comparable
   const s=(Math.min(W,H)/2 - 14)/viewR;
   const rr=r*s, headR=Math.max(2.4, (v.headD/2)*s);  // drawn head = actual head radius
-  const half=v.n/2, holeStep=360/half, plan=sd.plan;
+  const half=sd.nf, holeStep=360/half, plan=sd.plan;
   const R=v.erd/2;
 
   // flange disc
@@ -551,16 +567,16 @@ function drawHubDetail(svgId, v, sd, viewR){
 // =========================================================
 //  Driver
 // =========================================================
-// disallow crow's foot when the spoke count can't support it (nf not divisible by 3)
-function updatePatternAvail(n){
-  const cfOk = (n/2) % 3 === 0;
+// disallow crow's foot when it can't apply (count not /3, or in 2:1 mode)
+function updatePatternAvail(v){
+  const cfOk = !v.triplet && (v.n/2) % 3 === 0;
   ['xL','xR'].forEach(id => {
     for(const o of $(id).options) if(o.value[0]==='c') o.disabled = !cfOk;
   });
 }
 function recalc(){
   const v=read();
-  updatePatternAvail(v.n);
+  updatePatternAvail(v);
   const c=compute(v);
   renderResults(v,c);
   drawDish(v,c);
@@ -575,7 +591,7 @@ function recalc(){
 function syncToHash(){
   const p=new URLSearchParams();
   for(const f of FIELDS) p.set(f, $(f).value);
-  p.set('stretch', $('stretch').checked ? 1 : 0);
+  for(const b of BOOLS) p.set(b, $(b).checked ? 1 : 0);
   history.replaceState(null,'','#'+p.toString());
 }
 function loadFromHash(){
@@ -583,13 +599,13 @@ function loadFromHash(){
   const p=new URLSearchParams(location.hash.slice(1));
   let any=false;
   for(const f of FIELDS) if(p.has(f)){ $(f).value=p.get(f); any=true; }
-  if(p.has('stretch')){ $('stretch').checked = p.get('stretch')==='1'; any=true; }
+  for(const b of BOOLS) if(p.has(b)){ $(b).checked = p.get(b)==='1'; any=true; }
   return any;
 }
 // Persisted state, so picking a rim/hub on another tab carries back here.
 function saveState(){
   const st={}; for(const f of FIELDS) st[f]=$(f).value;
-  st.stretch = $('stretch').checked;
+  for(const b of BOOLS) st[b] = $(b).checked;
   try{ localStorage.setItem('spokes.state', JSON.stringify(st)); }catch(e){}
 }
 function loadState(){
@@ -597,11 +613,11 @@ function loadState(){
   if(!st) return false;
   let any=false;
   for(const f of FIELDS) if(st[f]!=null){ $(f).value=st[f]; any=true; }
-  if(st.stretch!=null){ $('stretch').checked = !!st.stretch; any=true; }
+  for(const b of BOOLS) if(st[b]!=null){ $(b).checked = !!st[b]; any=true; }
   return any;
 }
 
-for(const f of [...FIELDS,'stretch']){
+for(const f of [...FIELDS,...BOOLS]){
   $(f).addEventListener('input', ()=>{ recalc(); syncToHash(); saveState(); });
   $(f).addEventListener('change', ()=>{ recalc(); syncToHash(); saveState(); });
 }
