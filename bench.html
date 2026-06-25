@@ -81,9 +81,9 @@
 
   <div class="banner" id="bannerBox">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5 15 14H1L8 1.5Zm0 3.2L3.2 13h9.6L8 4.7Zm-.8 2.8h1.6v3H7.2v-3Zm0 4h1.6V13H7.2v-1.5Z"/></svg>
-    <div id="bannerText"><b>This bench is stored only in this browser, on this device.</b> It isn't synced to an account
-    or backed up anywhere. If you clear your browser data or switch devices it's gone — use
-    <b>Export</b> below to keep a copy. Nothing here leaves your machine.</div>
+    <div id="bannerText"><b>This bench lives in this browser, on this device — it won't travel with you.</b>
+    It won't show up on your phone or another computer, and clearing your browser data erases it.
+    <b>Sign in</b> to sync it across devices, or <b>Export</b> to save a copy.</div>
   </div>
 
   <div class="panel">
@@ -215,7 +215,7 @@ function renderAccount(u){
     body.innerHTML = `<div class="row" style="margin-top:0"><span class="msg">Signed in as <b>${(u.email||'you')}</b> — your bench syncs across devices.</span> <button class="btn ghost" id="signOut">Sign out</button></div>`;
     $('#signOut').addEventListener('click', ()=>Cloud.signOut());
     box.style.cssText='background:#e7f6ec;border:1px solid #bfe6cb;border-radius:9px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:flex-start;color:#0a7d33';
-    text.innerHTML='<b>Synced to your account.</b> This bench is saved to Supabase and follows you on any device you sign in on. Sign out to go back to local-only here.';
+    text.innerHTML='<b>Synced to your account.</b> This bench follows you onto any device you sign in on. Sign out to keep it on this device only.';
   } else {
     status.textContent='— local only';
     body.innerHTML = `<div class="row" style="margin-top:0">

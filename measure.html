@@ -46,6 +46,9 @@
   .use:disabled{opacity:.4; cursor:default}
   .tip{color:var(--muted); font-size:13px}
   a{color:var(--accent)}
+  details{margin-top:14px}
+  summary{cursor:pointer; color:var(--accent); font-size:13px; font-weight:600}
+  details ol{margin-top:10px}
 </style>
 </head>
 <body>
@@ -63,19 +66,8 @@
 <main>
 
   <div class="panel">
-    <h2>Rim ERD — the two-spoke method</h2>
-    <p>ERD (effective rim diameter) is the diameter the spoke <i>ends</i> must reach. It's the
-    single most important — and least reliable — number in the build, so measure it with the
-    nipples you'll actually use.</p>
-    <ol>
-      <li>Take <b>two spokes</b> you don't mind sacrificing and <b>two nipples</b> from your build.</li>
-      <li>Thread a nipple onto each spoke until the spoke end is <b>flush with the bottom of the screwdriver slot</b> — the point the spoke should reach.</li>
-      <li>With calipers, measure each spoke from the <b>inside of the elbow</b> to that flush point: <code>S₁</code> and <code>S₂</code>.</li>
-      <li>Drop both assemblies into <b>two directly-opposite</b> spoke holes, nipples seated in the rim bed, spokes pointing toward the centre.</li>
-      <li>Measure the <b>gap between the two elbows</b> across the middle: <code>G</code>. If the spokes overlap, enter <code>G</code> as negative.</li>
-    </ol>
+    <h2>Rim ERD — two-spoke method</h2>
     <p><code>ERD = S₁ + S₂ + G</code> — the straight line from one flush point through the centre to the other.</p>
-
     <div class="calc">
       <div class="row">
         <div class="fld"><label>S₁ <small>elbow → flush, mm</small></label><input id="s1" type="number" step="0.1" placeholder="289"></div>
@@ -84,27 +76,31 @@
         <button class="use" id="useErd" disabled>use this ERD →</button>
       </div>
       <div class="out" id="erdOut"></div>
-      <p class="tip">Measure twice. Repeat on a couple of hole-pairs and average — rims are rarely perfectly round.</p>
     </div>
+    <details>
+      <summary>How to take the measurements</summary>
+      <ol>
+        <li>Take <b>two spokes</b> you don't mind sacrificing and <b>two nipples</b> from your build.</li>
+        <li>Thread a nipple onto each spoke until the spoke end is <b>flush with the bottom of the screwdriver slot</b>.</li>
+        <li>With calipers, measure each spoke from the <b>inside of the elbow</b> to that flush point: <code>S₁</code> and <code>S₂</code>.</li>
+        <li>Drop both into <b>two directly-opposite</b> spoke holes, nipples seated in the rim bed, spokes pointing toward the centre.</li>
+        <li>Measure the <b>gap between the two elbows</b> across the middle: <code>G</code> (negative if they overlap).</li>
+      </ol>
+    </details>
   </div>
 
   <div class="panel">
     <h2>Hub — flange dimensions</h2>
-    <p>For each flange you need two numbers, plus the over-locknut width.</p>
-    <ol>
-      <li><b>Flange PCD</b> (pitch-circle diameter): the diameter of the circle the spoke holes sit on. Measure centre-to-centre across two opposite holes; if you can only reach adjacent holes, measure hole spacing and let the geometry give the circle, or measure across the flange and subtract a hole diameter.</li>
-      <li><b>Centre-to-flange</b> (left and right): the distance from the hub's <i>centre plane</i> to each flange's spoke-hole face. Measure the over-locknut width (OLN), halve it to find the centre, then measure from a locknut face to each flange and subtract.</li>
-      <li><b>OLN</b>: the width across the locknuts — 100 mm front / 130–142 mm rear are typical. It sets where the centre plane is.</li>
-    </ol>
-    <p class="tip">Rear and disc hubs are asymmetric — the two centre-to-flange numbers differ, and that difference is your dish. Enter both sides separately in the calculator.</p>
-    <p><a href="hubs.html">Browse the hub database →</a> to compare, or enter measured values directly on the <a href="index.html">calculator</a>.</p>
-  </div>
-
-  <div class="panel">
-    <h2>Why bother</h2>
-    <p>Catalogue ERD is often optimistic or rounded, and a millimetre of ERD error is a whole
-    spoke size. When you send a measured ERD from here, the calculator drops its uncertainty
-    band to zero — because now <i>you</i> know the number. Everything stays in your browser.</p>
+    <p>Per flange: <b>flange PCD</b> and <b>centre-to-flange</b>, plus the <b>OLN</b>. Rear and disc hubs are asymmetric — enter left and right separately.</p>
+    <details>
+      <summary>How to take the measurements</summary>
+      <ol>
+        <li><b>Flange PCD</b> (the spoke-hole circle): measure centre-to-centre across two opposite holes; or measure across the flange and subtract a hole diameter.</li>
+        <li><b>Centre-to-flange</b> (left and right): halve the OLN to find the centre plane, then measure from a locknut face to each flange and subtract.</li>
+        <li><b>OLN</b>: the width across the locknuts — 100 mm front, 130–142 mm rear are typical.</li>
+      </ol>
+    </details>
+    <p style="margin-top:10px"><a href="hubs.html">Browse the hub database →</a></p>
   </div>
 
 </main>
@@ -131,7 +127,7 @@ function recompute(){
 ['s1','s2','g'].forEach(id=>$('#'+id).addEventListener('input',recompute));
 $('#useErd').addEventListener('click',()=>{
   if(erd==null) return;
-  setState({ erd:String(erd.toFixed(1)), erdTol:'0' });  // measured -> no uncertainty band
+  setState({ erd:String(erd.toFixed(1)) });
   location.href='index.html';
 });
 </script>
