@@ -96,6 +96,25 @@
   .foot code{font-family:var(--mono); background:#f3f3f3; padding:1px 5px; border-radius:4px}
   details{margin-top:8px}
   summary{cursor:pointer; color:var(--accent); font-size:13px}
+  #printHead{display:none}
+  @media print{
+    @page{ margin:12mm; }
+    body{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    header, nav.tabs, .foot, #permalink, .hint, #advnote, #patwarn,
+    main > section:first-child { display:none !important; }
+    main{ display:block !important; max-width:none !important; padding:0 !important; }
+    .panel{ border:none !important; padding:0 !important; margin:0 0 8px !important; }
+    .panel > h2{ display:none; }
+    #printHead{ display:block; margin-bottom:6px; }
+    #printHead .pTitle{ font-size:17px; font-weight:700; }
+    #printHead .pSpec{ font-size:12px; margin-top:3px; line-height:1.5; }
+    .results{ font-size:11px; }
+    .results tr.big td{ font-size:16px; padding:5px 8px; }
+    .diagrams{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:10px; break-inside:avoid; }
+    figure{ border:1px solid #ccc !important; break-inside:avoid; }
+    figcaption .dethead{ font-size:9px; }
+    svg{ max-height:165mm; }
+  }
 </style>
 </head>
 <body>
@@ -206,6 +225,7 @@
 
   <!-- ============ RESULTS + DIAGRAMS ============ -->
   <section>
+    <div id="printHead"><div class="pTitle">Spoke build</div><div class="pSpec" id="pSpec"></div></div>
     <div class="panel" style="margin-bottom:16px">
       <h2>Results</h2>
       <table class="results">
@@ -575,11 +595,22 @@ function updatePatternAvail(v){
     for(const o of $(id).options) if(o.value[0]==='c') o.disabled = !cfOk;
   });
 }
+function printSummary(v){
+  const txt=id=>{ const e=$(id); return e&&e.options[e.selectedIndex] ? e.options[e.selectedIndex].text : ''; };
+  const parts=[], br=$('benchRim'), bh=$('benchHub');
+  if(br && br.selectedIndex>0) parts.push('<b>Rim:</b> '+txt('benchRim'));
+  if(bh && bh.selectedIndex>0) parts.push('<b>Hub:</b> '+txt('benchHub'));
+  let lace=`${v.n}h · L ${txt('xL')} / R ${txt('xR')}`;
+  if(v.triplet) lace+=' · 2:1'; if(v.spStyle==='sp') lace+=' · straight-pull';
+  parts.push(`<b>ERD</b> ${v.erd} · ${lace} · <b>PCD</b> ${v.dL}/${v.dR} · <b>offset</b> ${v.wL}/${v.wR}`);
+  $('pSpec').innerHTML = parts.join('<br>');
+}
 function recalc(){
   const v=read();
   updatePatternAvail(v);
   const c=compute(v);
   renderResults(v,c);
+  printSummary(v);
   drawDish(v,c);
   drawLacing('svgLacL','lacLcap', v, c.L, 'Left flange');
   drawLacing('svgLacR','lacRcap', v, c.R, 'Right flange');

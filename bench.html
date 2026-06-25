@@ -97,7 +97,7 @@
   </div>
 
   <div class="panel">
-    <h2>Export / Import <span style="font-weight:400;text-transform:none;letter-spacing:0">plain, hand-editable JSON</span></h2>
+    <h2>Export / Import <span style="font-weight:400;text-transform:none;letter-spacing:0">save a copy, or paste one in</span></h2>
     <div class="io">
       <div>
         <textarea id="exp" readonly></textarea>
@@ -232,15 +232,17 @@ refresh();
 
 // ---- optional cloud login + sync ----
 function renderAccount(u){
-  const status=$('#acctStatus'), body=$('#acctBody'), box=$('#bannerBox'), text=$('#bannerText');
+  const status=$('#acctStatus'), body=$('#acctBody'), box=$('#bannerBox'), text=$('#bannerText'), icon=box.querySelector('svg');
   if(u){
     status.textContent='— synced';
     body.innerHTML = `<div class="row" style="margin-top:0"><span class="msg">Signed in as <b>${(u.email||'you')}</b> — your bench syncs across devices.</span> <button class="btn ghost" id="signOut">Sign out</button></div>`;
     $('#signOut').addEventListener('click', ()=>Cloud.signOut());
     box.style.cssText='background:#e7f6ec;border:1px solid #bfe6cb;border-radius:9px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:flex-start;color:#0a7d33';
-    text.innerHTML='<b>Synced to your account.</b> This bench follows you onto any device you sign in on. Sign out to keep it on this device only.';
+    if(icon) icon.style.display='none';
+    text.innerHTML='<b>Synced to your account.</b> This bench follows you onto any device you sign in on. Sign out and it stays on whatever device you are on — new edits won’t reach your account until you sign back in.';
   } else {
     status.textContent='— local only';
+    box.style.cssText=''; if(icon) icon.style.display='';   // back to the amber device-local warning
     body.innerHTML = `<div class="row" style="margin-top:0">
       <input id="email" type="email" placeholder="you@email.com" autocomplete="email"
         style="font:13px var(--mono);padding:8px 10px;border:1px solid var(--rule);border-radius:7px;width:230px;max-width:60vw">

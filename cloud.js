@@ -95,6 +95,6 @@
       const { error } = await db.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
       if (error) throw error;
     },
-    async signOut() { await ready; if (db) await db.auth.signOut(); },
+    async signOut() { await ready; if (db) await db.auth.signOut(); user = null; lastSync = null; notifyUser(); },
   };
 })();

@@ -91,7 +91,16 @@
 
   <div class="panel">
     <h2>Hub — flange dimensions</h2>
-    <p>Per flange: <b>flange PCD</b> and <b>centre-to-flange</b>, plus the <b>OLN</b>. Rear and disc hubs are asymmetric — enter left and right separately.</p>
+    <p>Per flange: <b>flange PCD</b> and <b>centre-to-flange</b>. Rear and disc hubs are asymmetric — enter left and right separately.</p>
+    <div class="calc">
+      <div class="row">
+        <div class="fld"><label>Flange PCD <small>L / R, mm</small></label>
+          <div style="display:flex;gap:6px"><input id="hpcdL" type="number" step="0.1" placeholder="L"><input id="hpcdR" type="number" step="0.1" placeholder="R"></div></div>
+        <div class="fld"><label>Centre-to-flange <small>L / R, mm</small></label>
+          <div style="display:flex;gap:6px"><input id="hctfL" type="number" step="0.1" placeholder="L"><input id="hctfR" type="number" step="0.1" placeholder="R"></div></div>
+        <button class="use" id="useHub" disabled>use this hub →</button>
+      </div>
+    </div>
     <details>
       <summary>How to take the measurements</summary>
       <ol>
@@ -128,6 +137,23 @@ function recompute(){
 $('#useErd').addEventListener('click',()=>{
   if(erd==null) return;
   setState({ erd:String(erd.toFixed(1)) });
+  location.href='index.html';
+});
+
+// hub helper: measured flange dims -> the calculator's hub inputs
+const hubIds=['hpcdL','hpcdR','hctfL','hctfR'];
+function hubCheck(){
+  const ok = hubIds.some(id=>isFinite(parseFloat($('#'+id).value)));
+  $('#useHub').disabled = !ok;
+}
+hubIds.forEach(id=>$('#'+id).addEventListener('input',hubCheck));
+$('#useHub').addEventListener('click',()=>{
+  const o={}, g=id=>parseFloat($('#'+id).value);
+  if(isFinite(g('hpcdL'))) o.dL=String(g('hpcdL'));
+  if(isFinite(g('hpcdR'))) o.dR=String(g('hpcdR'));
+  if(isFinite(g('hctfL'))) o.wL=String(g('hctfL'));
+  if(isFinite(g('hctfR'))) o.wR=String(g('hctfR'));
+  setState(o);
   location.href='index.html';
 });
 </script>
