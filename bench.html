@@ -74,9 +74,14 @@
   <a href="bench.html" class="on">Bench</a>
 </nav>
 <main>
-  <div class="banner">
+  <div class="panel" id="acct">
+    <h2>Account <span id="acctStatus" style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">— local only</span></h2>
+    <div id="acctBody"></div>
+  </div>
+
+  <div class="banner" id="bannerBox">
     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1.5 15 14H1L8 1.5Zm0 3.2L3.2 13h9.6L8 4.7Zm-.8 2.8h1.6v3H7.2v-3Zm0 4h1.6V13H7.2v-1.5Z"/></svg>
-    <div><b>This bench is stored only in this browser, on this device.</b> It isn't synced to an account
+    <div id="bannerText"><b>This bench is stored only in this browser, on this device.</b> It isn't synced to an account
     or backed up anywhere. If you clear your browser data or switch devices it's gone — use
     <b>Export</b> below to keep a copy. Nothing here leaves your machine.</div>
   </div>
@@ -112,6 +117,7 @@
 </main>
 
 <script src="bench.js"></script>
+<script src="cloud.js"></script>
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
@@ -200,6 +206,35 @@ $('#impReplace').addEventListener('click', ()=>doImport('replace'));
 $('#impMerge').addEventListener('click', ()=>doImport('merge'));
 
 refresh();
+
+// ---- optional cloud login + sync ----
+function renderAccount(u){
+  const status=$('#acctStatus'), body=$('#acctBody'), box=$('#bannerBox'), text=$('#bannerText');
+  if(u){
+    status.textContent='— synced';
+    body.innerHTML = `<div class="row" style="margin-top:0"><span class="msg">Signed in as <b>${(u.email||'you')}</b> — your bench syncs across devices.</span> <button class="btn ghost" id="signOut">Sign out</button></div>`;
+    $('#signOut').addEventListener('click', ()=>Cloud.signOut());
+    box.style.cssText='background:#e7f6ec;border:1px solid #bfe6cb;border-radius:9px;padding:12px 14px;font-size:13px;display:flex;gap:10px;align-items:flex-start;color:#0a7d33';
+    text.innerHTML='<b>Synced to your account.</b> This bench is saved to Supabase and follows you on any device you sign in on. Sign out to go back to local-only here.';
+  } else {
+    status.textContent='— local only';
+    body.innerHTML = `<div class="row" style="margin-top:0">
+      <input id="email" type="email" placeholder="you@email.com" autocomplete="email"
+        style="font:13px var(--mono);padding:8px 10px;border:1px solid var(--rule);border-radius:7px;width:230px;max-width:60vw">
+      <button class="btn" id="sendLink">Email me a sign-in link</button>
+      <span class="msg" id="authMsg"></span></div>
+      <p class="msg" style="margin-top:8px;color:var(--muted)">Optional. Signing in syncs your bench to Supabase so it follows you across devices; until then it stays on this device only.</p>`;
+    $('#sendLink').addEventListener('click', async ()=>{
+      const email=$('#email').value.trim(), m=$('#authMsg');
+      if(!email){ m.textContent='Enter your email.'; m.className='msg err'; return; }
+      m.textContent='Sending…'; m.className='msg';
+      try{ await Cloud.signInEmail(email); m.textContent='Sent — check your email for the sign-in link.'; m.className='msg ok'; }
+      catch(e){ m.textContent=(e&&e.message)||'Could not send the link.'; m.className='msg err'; }
+    });
+  }
+}
+if(window.Cloud){ Cloud.onUser(renderAccount); Cloud.onSync(refresh); }
+else { $('#acctBody').innerHTML='<span class="msg">Cloud sign-in is unavailable right now.</span>'; }
 </script>
 </body>
 </html>

@@ -10,11 +10,17 @@
   const KEY = 'spokes.bench';
   const NOTE = 'Your bench is saved only in this browser, on this device — it is not synced or backed up. Export the JSON to keep a copy or move it to another device.';
 
+  const _subs = [];
+  function onChange(fn) { _subs.push(fn); }       // notified after every save (for cloud sync, UI)
+
   function load() {
     try { const b = JSON.parse(localStorage.getItem(KEY)); if (b && Array.isArray(b.rims) && Array.isArray(b.hubs)) return b; } catch (e) {}
     return { rims: [], hubs: [] };
   }
-  function save(b) { try { localStorage.setItem(KEY, JSON.stringify(b)); } catch (e) {} }
+  function save(b) {
+    try { localStorage.setItem(KEY, JSON.stringify(b)); } catch (e) {}
+    _subs.forEach(fn => { try { fn(b); } catch (e) {} });
+  }
   function genId() { return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
   function addRim(rim) { const b = load(); rim = Object.assign({}, rim); if (!rim.id) rim.id = genId(); if (!rim.src) rim.src = 'you'; b.rims.push(rim); save(b); return rim; }
@@ -40,5 +46,5 @@
     return b;
   }
 
-  window.Bench = { KEY, NOTE, load, save, genId, addRim, addHub, updateRim, updateHub, removeRim, removeHub, hasRim, hasHub, exportJSON, importJSON };
+  window.Bench = { KEY, NOTE, load, save, onChange, genId, addRim, addHub, updateRim, updateHub, removeRim, removeHub, hasRim, hasHub, exportJSON, importJSON };
 })();

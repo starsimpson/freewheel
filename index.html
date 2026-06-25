@@ -120,7 +120,7 @@
         <select id="benchRim"><option value="">Rim — none / manual</option></select>
         <select id="benchHub"><option value="">Hub — none / manual</option></select>
       </div>
-      <p class="hint" style="margin-top:10px">Your shortlist, saved on <b>this device only</b> (not synced or backed up). <a href="bench.html">Manage &amp; add your own →</a></p>
+      <p class="hint" style="margin-top:10px"><span id="benchStatus">Your shortlist, saved on <b>this device only</b></span>. <a href="bench.html">Manage, add your own &amp; sign in →</a></p>
     </div>
 
     <div class="panel">
@@ -325,6 +325,7 @@
 
 <script src="spokecalc.js?v=4"></script>
 <script src="bench.js"></script>
+<script src="cloud.js"></script>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -650,6 +651,12 @@ $('benchHub').addEventListener('change', e=>{
   recalc(); syncToHash(); saveState();
 });
 populateBench();
+
+// optional cloud sync: refresh the pickers after a sign-in sync, and show status
+if(window.Cloud){
+  Cloud.onSync(populateBench);
+  Cloud.onUser(u=>{ const s=$('benchStatus'); if(s) s.innerHTML = u ? 'Your shortlist, <b>synced to your account</b>' : 'Your shortlist, saved on <b>this device only</b>'; });
+}
 
 // A shared permalink wins; otherwise restore the last state (incl. rim/hub picks).
 if(!loadFromHash()) loadState();
