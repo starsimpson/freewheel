@@ -59,19 +59,32 @@
   .msg{font-size:12px}
   .msg.err{color:var(--warn)} .msg.ok{color:#0a7d33}
   a{color:var(--accent)}
+  .btn:disabled{opacity:.4; cursor:default}
+  .measure code{font-family:var(--mono); background:#f3f3f3; padding:1px 5px; border-radius:4px}
+  .measure .calc{padding:14px; background:#fafbff; border:1px solid var(--rule); border-radius:8px; margin-top:8px}
+  .measure .mrow{display:flex; flex-wrap:wrap; gap:14px 18px; align-items:flex-end}
+  .measure .fld{display:flex; flex-direction:column; gap:4px}
+  .measure .fld label{font-size:12px; color:var(--muted)}
+  .measure .fld small{color:var(--muted)}
+  .measure input[type=number]{width:96px; font:14px var(--mono); text-align:right; padding:7px 8px; border:1px solid var(--rule); border-radius:6px; background:#fff}
+  .measure input:focus{outline:2px solid var(--accentbg); border-color:var(--accent)}
+  .measure .out{margin-top:12px; font:15px var(--mono)}
+  .measure .out b{font-size:20px}
+  .measure details{margin-top:14px}
+  .measure summary{cursor:pointer; color:var(--accent); font-size:13px; font-weight:600}
+  .measure ol{margin-top:10px; padding-left:20px}
 </style>
 </head>
 <body>
 <header>
   <h1>Spokes</h1>
-  <p>Your bench — a shortlist of rims and hubs to compare on the calculator without re-typing.</p>
+  <p>Your bench — shortlist rims and hubs, measure your own, and compare them on the calculator without re-typing.</p>
 </header>
 <nav class="tabs">
   <a href="index.html">Calculator</a>
+  <a href="bench.html" class="on">Bench</a>
   <a href="rims.html">Rims</a>
   <a href="hubs.html">Hubs</a>
-  <a href="measure.html">Measure</a>
-  <a href="bench.html" class="on">Bench</a>
 </nav>
 <main>
   <div class="panel" id="acct">
@@ -94,6 +107,51 @@
   <div class="panel">
     <h2>Hubs <button class="btn ghost" id="addHub">+ add hub</button></h2>
     <div id="hubWrap"></div>
+  </div>
+
+  <div class="panel measure">
+    <h2>Measure a rim — ERD</h2>
+    <p style="margin:6px 0"><code>ERD = S₁ + S₂ + G</code> — the straight line from one flush point through the centre to the other.</p>
+    <div class="calc">
+      <div class="mrow">
+        <div class="fld"><label>S₁ <small>elbow → flush, mm</small></label><input id="s1" type="number" step="0.1" placeholder="289"></div>
+        <div class="fld"><label>S₂ <small>elbow → flush, mm</small></label><input id="s2" type="number" step="0.1" placeholder="289"></div>
+        <div class="fld"><label>G <small>elbow gap, − if overlap</small></label><input id="g" type="number" step="0.1" placeholder="24"></div>
+        <button class="btn" id="useErd" disabled>use this ERD →</button>
+      </div>
+      <div class="out" id="erdOut"></div>
+    </div>
+    <details>
+      <summary>How to take the measurements</summary>
+      <ol>
+        <li>Take <b>two spokes</b> you don't mind sacrificing and <b>two nipples</b> from your build.</li>
+        <li>Thread a nipple onto each until the spoke end is <b>flush with the bottom of the screwdriver slot</b>.</li>
+        <li>Measure each from the <b>inside of the elbow</b> to that flush point: <code>S₁</code> and <code>S₂</code>.</li>
+        <li>Drop both into <b>two directly-opposite</b> spoke holes, nipples seated, spokes pointing toward the centre.</li>
+        <li>Measure the <b>gap between the two elbows</b> across the middle: <code>G</code> (negative if they overlap).</li>
+      </ol>
+    </details>
+  </div>
+
+  <div class="panel measure">
+    <h2>Measure a hub — flange dimensions</h2>
+    <p style="margin:6px 0">Rear and disc hubs are asymmetric — enter left and right separately.</p>
+    <div class="calc">
+      <div class="mrow">
+        <div class="fld"><label>Flange PCD <small>L / R, mm</small></label>
+          <div style="display:flex;gap:6px"><input id="hpcdL" type="number" step="0.1" placeholder="L"><input id="hpcdR" type="number" step="0.1" placeholder="R"></div></div>
+        <div class="fld"><label>Centre-to-flange <small>L / R, mm</small></label>
+          <div style="display:flex;gap:6px"><input id="hctfL" type="number" step="0.1" placeholder="L"><input id="hctfR" type="number" step="0.1" placeholder="R"></div></div>
+        <button class="btn" id="useHub" disabled>use this hub →</button>
+      </div>
+    </div>
+    <details>
+      <summary>How to take the measurements</summary>
+      <ol>
+        <li><b>Flange PCD</b> (the spoke-hole circle): measure centre-to-centre across two opposite holes, or across the flange and subtract a hole diameter.</li>
+        <li><b>Centre-to-flange</b> (left and right): halve the over-locknut width to find the centre plane, then measure from a locknut face to each flange and subtract.</li>
+      </ol>
+    </details>
   </div>
 
   <div class="panel">
@@ -260,6 +318,36 @@ function renderAccount(u){
 }
 if(window.Cloud){ Cloud.onUser(renderAccount); Cloud.onSync(refresh); }
 else { $('#acctBody').innerHTML='<span class="msg">Cloud sign-in is unavailable right now.</span>'; }
+
+// ---- measure helpers -> calculator inputs ----
+function setCalc(obj){
+  let st={}; try{ st=JSON.parse(localStorage.getItem('spokes.state')||'{}'); }catch(e){}
+  Object.assign(st,obj);
+  try{ localStorage.setItem('spokes.state', JSON.stringify(st)); }catch(e){}
+}
+let _erd=null;
+function recomputeErd(){
+  const s1=parseFloat($('#s1').value), s2=parseFloat($('#s2').value), g=parseFloat($('#g').value);
+  if(isFinite(s1)&&isFinite(s2)&&isFinite(g)){
+    _erd=s1+s2+g;
+    $('#erdOut').innerHTML=`ERD = ${s1} + ${s2} + ${g} = <b>${_erd.toFixed(1)} mm</b>`;
+    $('#useErd').disabled=false;
+  } else { _erd=null; $('#erdOut').textContent=''; $('#useErd').disabled=true; }
+}
+['s1','s2','g'].forEach(id=>$('#'+id).addEventListener('input',recomputeErd));
+$('#useErd').addEventListener('click',()=>{ if(_erd!=null){ setCalc({erd:String(_erd.toFixed(1))}); location.href='index.html'; }});
+
+const hubIds=['hpcdL','hpcdR','hctfL','hctfR'];
+const hubCheck=()=>{ $('#useHub').disabled = !hubIds.some(id=>isFinite(parseFloat($('#'+id).value))); };
+hubIds.forEach(id=>$('#'+id).addEventListener('input',hubCheck));
+$('#useHub').addEventListener('click',()=>{
+  const o={}, get=id=>parseFloat($('#'+id).value);
+  if(isFinite(get('hpcdL'))) o.dL=String(get('hpcdL'));
+  if(isFinite(get('hpcdR'))) o.dR=String(get('hpcdR'));
+  if(isFinite(get('hctfL'))) o.wL=String(get('hctfL'));
+  if(isFinite(get('hctfR'))) o.wR=String(get('hctfR'));
+  setCalc(o); location.href='index.html';
+});
 </script>
 </body>
 </html>
