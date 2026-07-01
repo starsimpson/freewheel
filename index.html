@@ -109,11 +109,15 @@
     #printHead .pTitle{ font-size:17px; font-weight:700; }
     #printHead .pSpec{ font-size:12px; margin-top:3px; line-height:1.5; }
     .results{ font-size:11px; }
-    .results tr.big td{ font-size:16px; padding:5px 8px; }
-    .diagrams{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:10px; break-inside:avoid; }
+    .results th, .results td{ padding:4px 8px; }
+    .results tr.big td{ font-size:15px; padding:5px 8px; }
+    .diagrams{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:8px; }
     figure{ border:1px solid #ccc !important; break-inside:avoid; }
-    figcaption .dethead{ font-size:9px; }
-    svg{ max-height:165mm; }
+    figcaption{ padding:4px 6px; font-size:10px; }
+    .dethead{ font-size:9px; padding:3px 6px; }
+    /* explicit caps so the tall dish + stacked lacing figures fit under the table on one page */
+    #svgDish{ max-height:118mm; }
+    #svgLacL, #svgLacR, #svgDetL, #svgDetR{ max-height:55mm; }
   }
 </style>
 </head>
