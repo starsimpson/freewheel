@@ -117,7 +117,8 @@ function loadStateSet(field, value){
   try{ localStorage.setItem('spokes.state', JSON.stringify(st)); }catch(e){}
 }
 function useRim(r){
-  loadStateSet('erd', r.erd);          // ERD is the unambiguous value a rim contributes
+  loadStateSet('erd', r.erd);              // ERD is the unambiguous value a rim contributes
+  loadStateSet('ro', r.offsetAvg || 0);    // asymmetric-rim offset
   location.href = 'index.html';
 }
 

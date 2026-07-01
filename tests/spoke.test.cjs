@@ -43,6 +43,11 @@ ok(SC.side(V(), 18, 55, 3, 1, 16).lenGeo > SC.side(V(), 18, 55, 0, 1, 16).lenGeo
   const sp = SC.side(V({ spStyle: 'sp' }), 18, 55, 3, 1, 16).lenGeo;
   near(sp - jb, 2.6 / 2, 1e-9, 'straight-pull = J-bend + ½ hole');
 }
+// asymmetric rim offset: +ro shifts the bed toward the right, lengthening the left spoke
+{
+  const base = SC.compute(V()), off = SC.compute(V({ ro: 3 }));
+  ok(off.L.len > base.L.len && off.R.len < base.R.len, '+rim offset lengthens left, shortens right');
+}
 // 2:1 triplet: drive (right) gets 2/3 of spokes, non-drive 1/3, heavy side runs slacker
 {
   const t = SC.compute(V({ n: 24, triplet: true, xL: '1', xR: '3' }));

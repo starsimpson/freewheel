@@ -37,7 +37,10 @@
     // axial distance flange->nipple. Hub offset shifts hub toward +(right);
     // drilling offset moves this side's nipple outward (away from center).
     const o = (sign < 0) ? v.oL : v.oR;
-    const f = Math.abs(w + sign * v.ho - o);   // drilling offset moves the nipple toward its own flange
+    // axial run flange -> nipple. Hub offset shifts the hub; per-side drilling offset
+    // shifts one nipple; rim offset (asymmetric rims) shifts the whole spoke bed sideways
+    // — toward + (right/drive), so it lengthens the left spoke and shortens the right.
+    const f = Math.abs(w + sign * v.ho - o - sign * (v.ro || 0));
     const inPlane = Math.sqrt(R * R + r * r - 2 * R * r * Math.cos(th)); // chord in wheel plane
     // J-bend wraps the elbow to the far side of the hole (subtract ½ hole);
     // a straight-pull head seats in the hole, so there is no such wrap.

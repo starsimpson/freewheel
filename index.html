@@ -151,6 +151,8 @@
       <div class="grid">
         <div class="lab">ERD <small>effective rim diameter, mm</small></div>
         <input id="erd" class="single" type="number" step="0.1" min="1" value="602.3" style="width:158px">
+        <div class="lab">Rim offset <small>asymmetric rim; + toward drive/right</small></div>
+        <input id="ro" class="single" type="number" step="0.1" value="0" style="width:158px">
         <div class="lab">Drilling offset <small>+ moves L nipple left / R nipple right</small></div>
         <input id="oL" type="number" step="0.1" value="0">
         <input id="oR" type="number" step="0.1" value="0">
@@ -290,7 +292,7 @@
     <ul style="margin:4px 0 0">
       <li><code>R = ERD / 2</code> — the rim's effective radius, the point the spoke end should reach.</li>
       <li><code>r = flange PCD / 2</code> — radius of the hub's spoke-hole circle.</li>
-      <li><code>f</code> — axial centre-to-flange distance, adjusted by hub offset and drilling offset.</li>
+      <li><code>f</code> — axial centre-to-flange run, adjusted by hub offset, per-side drilling offset, and <b>rim offset</b>: an asymmetric rim shifts the whole spoke bed sideways, lengthening one side's spokes and shortening the other's. Picking a rim from the catalogue fills this from its "Offset (avg)".</li>
       <li><code>θ = crosses × 720 / spoke-count</code> — angle at the axle between a hub hole and its rim hole.</li>
       <li>We subtract <b>half the hub flange hole</b> (the spoke seats against the far side of the hole). This is a <i>hub</i> dimension — that's why it lives in the Hub panel.</li>
     </ul>
@@ -309,15 +311,22 @@
       <li><b>Wrap angle</b> — the angle the spoke makes with the rim, seen from the side. <b>Total angle at rim</b> combines the wrap angle with the bracing angle (edge-on) into the true 3-D misalignment of the spoke with the nipple: <code>acos(cos&nbsp;wrap · cos&nbsp;bracing)</code> — the larger it is, the more the nipple wants a washer or a swivelling seat.</li>
     </ul>
 
-    <h4 style="margin:14px 0 4px">Head clearance (our model, not a standard)</h4>
-    <p>At the hub, a spoke leaving its hole runs close to the head of the crossing spoke one hole
-    over. We treat both as circles in the flange plane:
-    <code>clearance = g − head_dia/2 − elbow_gauge/2</code>, where <code>g</code> is the
-    perpendicular distance from that neighbour's hole to this spoke's line. We deliberately do
-    <i>not</i> credit flange thickness — adjacent heads can foul across the flange, so this is the
-    worst case. No other calculator computes it the same way, so don't expect the number to match;
-    the hub-detail diagram (drawn to a shared scale for both flanges) lets you judge it by eye. For
-    crow's foot it's computed on the crossed spokes.</p>
+    <h4 style="margin:14px 0 4px">Head clearance (g) — how we compute it</h4>
+    <p>A spoke leaves its flange hole running <i>tangent</i> to a circle of radius
+    <code>p = R·r·sin θ / in-plane</code> (the circle the crossing spokes wrap around). Its nearest
+    crossing neighbour's hole sits one hole over, at flange angle
+    <code>φ = 360 / (spokes on that flange)</code>. <code>g</code> is the perpendicular distance from
+    that neighbour's hole to this spoke's straight line:</p>
+    <p style="margin:6px 0"><code>g = p·(cos φ − 1) + √(r² − p²)·sin φ</code>, then
+    <code>clearance = g − head_dia/2 − elbow_gauge/2</code></p>
+    <p>— the gap between the passing spoke (radius = ½ elbow gauge) and the neighbour's head
+    (radius = ½ head dia). Two sanity checks in case the number looks odd: a <b>radial</b> spoke has
+    <code>p = 0</code>, so <code>g = r·sin φ</code>, just the chord spacing between holes; as the
+    lacing turns tangential <code>p → r</code> and <code>g → r·(cos φ − 1) &lt; 0</code> — the spoke
+    now passes <i>inside</i> the neighbour's head, so clearance goes negative (the heads foul; drop a
+    cross). We deliberately do <i>not</i> credit flange thickness — adjacent heads can foul across
+    it, so this is the worst case, and no other tool computes it the same way. The hub-detail diagram
+    draws it at a shared scale for both flanges; for crow's foot it's computed on the crossed spokes.</p>
 
     <h4 style="margin:14px 0 4px">Lacing patterns</h4>
     <p>Each spoke's angle at the axle is <code>θ = crosses × 360 / (spokes on that flange)</code>.
@@ -346,7 +355,7 @@
   saved this data so it could live on.</p>
 </div>
 
-<script src="spokecalc.js?v=4"></script>
+<script src="spokecalc.js?v=5"></script>
 <script src="bench.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -356,7 +365,7 @@ const SVGNS = "http://www.w3.org/2000/svg";
 // the pure math lives in spokecalc.js (shared with the test suite)
 const { D2R, R2D, compute } = SpokeCalc;
 
-const FIELDS = ["erd","oL","oR","sd","sg","sgc","headD","wL","wR","dL","dR","n","xL","xR","spStyle","ho","tension","totalWarn"];
+const FIELDS = ["erd","ro","oL","oR","sd","sg","sgc","headD","wL","wR","dL","dR","n","xL","xR","spStyle","ho","tension","totalWarn"];
 const STRINGS = ["xL","xR","spStyle"];        // selects read as strings
 const BOOLS = ["stretch","triplet"];          // checkboxes
 
@@ -444,7 +453,7 @@ function drawDish(v,c){
   const aL = -(v.wL) + v.ho;   // left flange
   const aR =  (v.wR) + v.ho;   // right flange
   const rL = v.dL/2, rR = v.dR/2;
-  const nL = -v.oL, nR = v.oR;          // nipple axial (drilling offset)
+  const nL = (v.ro||0) - v.oL, nR = (v.ro||0) + v.oR;   // nipple axial (rim + drilling offset)
   const aMid = (aL + aR)/2;             // hub flange mid-plane
   // centerlines: rim spoke-bed centre (axial 0, grey) and hub flange mid-plane (blue)
   line(svg, cx,28, cx,H-16, {stroke:'#bbb','stroke-width':1,'stroke-dasharray':'3 4'});
@@ -676,6 +685,7 @@ function populateBench(){
 $('benchRim').addEventListener('change', e=>{
   const r = Bench.load().rims[+e.target.value]; if(!r) return;
   if(r.erd!=null) $('erd').value = r.erd;
+  $('ro').value = r.offsetAvg || 0;      // asymmetric-rim offset
   recalc(); syncToHash(); saveState();
 });
 $('benchHub').addEventListener('change', e=>{
