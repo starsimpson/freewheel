@@ -171,6 +171,8 @@
         <input id="dR" type="number" step="0.1" min="1" value="55">
         <div class="lab">Spoke-hole dia (flange) <small>hub drilling; ½ subtracted from length</small></div>
         <input id="sd" class="single" type="number" step="0.1" min="0" value="2.6" style="width:158px">
+        <div class="lab">Flange thickness <small>at the spoke holes, mm — for clearance</small></div>
+        <input id="ft" class="single" type="number" step="0.1" min="0" value="2.6" style="width:158px">
       </div>
     </div>
 
@@ -237,7 +239,7 @@
         <thead><tr><th></th><th>Left</th><th>Right</th></tr></thead>
         <tbody>
           <tr class="big"><td title="Hub flange hole to thread end. = √(R²+r²+f²−2·R·r·cosθ) − ½·flange-hole. Geometric length unless spoke-stretch compensation is ticked.">Spoke length</td><td id="r_len_L"></td><td id="r_len_R"></td></tr>
-          <tr><td title="In-plane gap between this spoke and the crossing neighbour's head: (perpendicular distance from that hole to the spoke line) − head radius − elbow radius. Flange thickness is not credited.">Spoke head clearance</td><td id="r_clr_L"></td><td id="r_clr_R"></td></tr>
+          <tr><td title="3-D gap between this spoke and the crossing neighbour's head: √(g² + flange-thickness²) − head-radius − elbow-radius, where g is the in-plane distance from that hole to the spoke line. Approximate; read the hub-detail diagram too.">Spoke head clearance</td><td id="r_clr_L"></td><td id="r_clr_R"></td></tr>
           <tr><td title="Angle between the spoke and the plane of the wheel = atan(f / in-plane run). Bigger braces the wheel better laterally.">Bracing angle</td><td id="r_brace_L"></td><td id="r_brace_R"></td></tr>
           <tr><td title="Tighter side pinned at 100%; the other is its true ratio (∝ 1/sin bracing). The offset rule-of-thumb is a close approximation.">Tension distribution</td><td id="r_tens_L"></td><td id="r_tens_R"></td></tr>
           <tr><td title="How far off radial the spoke leaves the hub flange. 90° is a perfectly tangential exit.">Flange exit angle</td><td id="r_exit_L"></td><td id="r_exit_R"></td></tr>
@@ -292,7 +294,7 @@
     <ul style="margin:4px 0 0">
       <li><code>R = ERD / 2</code> — the rim's effective radius, the point the spoke end should reach.</li>
       <li><code>r = flange PCD / 2</code> — radius of the hub's spoke-hole circle.</li>
-      <li><code>f</code> — axial centre-to-flange run, adjusted by hub offset, per-side drilling offset, and <b>rim offset</b>: an asymmetric rim shifts the whole spoke bed sideways, lengthening one side's spokes and shortening the other's. Picking a rim from the catalogue fills this from its "Offset (avg)".</li>
+      <li><code>f</code> — axial centre-to-flange run, adjusted by hub offset and by rim offset. <b>Offset / asymmetric rims</b> drill each side's holes off-centre (e.g. <code>6.3 L, −6.3 R</code> shifts the whole bed sideways; <code>11 L, 11 R</code> widens it) — picking such a rim fills the per-side <b>drilling offsets</b> straight from the catalogue.</li>
       <li><code>θ = crosses × 720 / spoke-count</code> — angle at the axle between a hub hole and its rim hole.</li>
       <li>We subtract <b>half the hub flange hole</b> (the spoke seats against the far side of the hole). This is a <i>hub</i> dimension — that's why it lives in the Hub panel.</li>
     </ul>
@@ -318,15 +320,16 @@
     <code>φ = 360 / (spokes on that flange)</code>. <code>g</code> is the perpendicular distance from
     that neighbour's hole to this spoke's straight line:</p>
     <p style="margin:6px 0"><code>g = p·(cos φ − 1) + √(r² − p²)·sin φ</code>, then
-    <code>clearance = g − head_dia/2 − elbow_gauge/2</code></p>
-    <p>— the gap between the passing spoke (radius = ½ elbow gauge) and the neighbour's head
-    (radius = ½ head dia). Two sanity checks in case the number looks odd: a <b>radial</b> spoke has
-    <code>p = 0</code>, so <code>g = r·sin φ</code>, just the chord spacing between holes; as the
-    lacing turns tangential <code>p → r</code> and <code>g → r·(cos φ − 1) &lt; 0</code> — the spoke
-    now passes <i>inside</i> the neighbour's head, so clearance goes negative (the heads foul; drop a
-    cross). We deliberately do <i>not</i> credit flange thickness — adjacent heads can foul across
-    it, so this is the worst case, and no other tool computes it the same way. The hub-detail diagram
-    draws it at a shared scale for both flanges; for crow's foot it's computed on the crossed spokes.</p>
+    <code>clearance = √(g² + flange_thickness²) − head_dia/2 − elbow_gauge/2</code></p>
+    <p>The neighbour's head sits on the far face of the flange (or recessed in its hole), so it's
+    offset from the passing spoke <i>axially</i> by roughly the flange thickness — the real gap is
+    that 3-D distance, less the passing spoke's radius (½ elbow gauge) and the head's radius
+    (½ head dia). Sanity check on <code>g</code>: a <b>radial</b> spoke has <code>p = 0</code>, so
+    <code>g = r·sin φ</code> (just the chord spacing between holes); as the lacing turns tangential
+    <code>p → r</code> and <code>g → r·(cos φ − 1)</code>, i.e. the spoke line crosses the neighbour
+    hole, and only the flange thickness keeps the head clear. It's an approximation of a genuinely
+    3-D interaction, so treat the number as a guide and read the hub-detail diagram (drawn at a
+    shared scale for both flanges) alongside it; for crow's foot it's computed on the crossed spokes.</p>
 
     <h4 style="margin:14px 0 4px">Lacing patterns</h4>
     <p>Each spoke's angle at the axle is <code>θ = crosses × 360 / (spokes on that flange)</code>.
@@ -355,7 +358,7 @@
   saved this data so it could live on.</p>
 </div>
 
-<script src="spokecalc.js?v=5"></script>
+<script src="spokecalc.js?v=6"></script>
 <script src="bench.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -365,7 +368,7 @@ const SVGNS = "http://www.w3.org/2000/svg";
 // the pure math lives in spokecalc.js (shared with the test suite)
 const { D2R, R2D, compute } = SpokeCalc;
 
-const FIELDS = ["erd","ro","oL","oR","sd","sg","sgc","headD","wL","wR","dL","dR","n","xL","xR","spStyle","ho","tension","totalWarn"];
+const FIELDS = ["erd","ro","oL","oR","sd","ft","sg","sgc","headD","wL","wR","dL","dR","n","xL","xR","spStyle","ho","tension","totalWarn"];
 const STRINGS = ["xL","xR","spStyle"];        // selects read as strings
 const BOOLS = ["stretch","triplet"];          // checkboxes
 
@@ -675,6 +678,12 @@ $('permalink').addEventListener('click', async e=>{
 
 // ---- bench pickers: fill the inputs from your saved rims/hubs ----
 function escAttr(s){ return String(s).replace(/[<>&"]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])); }
+// "6.3 L, -6.3 R" -> {oL:6.3, oR:-6.3}  (offset-drilled / asymmetric rims)
+function parseDrill(s){
+  if(!s) return null;
+  const d={}; for(const m of String(s).matchAll(/(-?\d+(?:\.\d+)?)\s*([LR])/g)) d[m[2]]=parseFloat(m[1]);
+  return (d.L===undefined && d.R===undefined) ? null : {oL:d.L||0, oR:d.R||0};
+}
 function populateBench(){
   const b = Bench.load();
   $('benchRim').innerHTML = '<option value="">Rim — none / manual</option>' +
@@ -685,7 +694,8 @@ function populateBench(){
 $('benchRim').addEventListener('change', e=>{
   const r = Bench.load().rims[+e.target.value]; if(!r) return;
   if(r.erd!=null) $('erd').value = r.erd;
-  $('ro').value = r.offsetAvg || 0;      // asymmetric-rim offset
+  const d = parseDrill(r.offsetDrilling);   // asymmetric / offset-drilled rims -> per-side offsets
+  $('oL').value = d ? d.oL : 0; $('oR').value = d ? d.oR : 0; $('ro').value = 0;
   recalc(); syncToHash(); saveState();
 });
 $('benchHub').addEventListener('change', e=>{

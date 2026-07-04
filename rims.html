@@ -116,9 +116,15 @@ function loadStateSet(field, value){
   st[field]=String(value);
   try{ localStorage.setItem('spokes.state', JSON.stringify(st)); }catch(e){}
 }
+function parseDrill(s){
+  if(!s) return null;
+  const d={}; for(const m of String(s).matchAll(/(-?\d+(?:\.\d+)?)\s*([LR])/g)) d[m[2]]=parseFloat(m[1]);
+  return (d.L===undefined && d.R===undefined) ? null : {oL:d.L||0, oR:d.R||0};
+}
 function useRim(r){
   loadStateSet('erd', r.erd);              // ERD is the unambiguous value a rim contributes
-  loadStateSet('ro', r.offsetAvg || 0);    // asymmetric-rim offset
+  const d = parseDrill(r.offsetDrilling);  // asymmetric / offset-drilled rims -> per-side offsets
+  loadStateSet('oL', d ? d.oL : 0); loadStateSet('oR', d ? d.oR : 0); loadStateSet('ro', 0);
   location.href = 'index.html';
 }
 

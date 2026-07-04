@@ -15,7 +15,7 @@ const near = (a, b, eps, msg) => ok(Math.abs(a - b) <= eps, `${msg}  (got ${a}, 
 
 // a complete input object with sensible defaults; override as needed
 const V = over => Object.assign({
-  erd: 602.3, oL: 0, oR: 0, sd: 2.6, sg: 2.0, sgc: 2.0, headD: 3.8,
+  erd: 602.3, oL: 0, oR: 0, sd: 2.6, ft: 2.6, sg: 2.0, sgc: 2.0, headD: 3.8,
   wL: 36, wR: 18, dL: 40.5, dR: 55, n: 32, xL: '0', xR: '3',
   ho: 0, tension: 110, stretch: false, spStyle: 'jbend', triplet: false,
 }, over || {});
@@ -42,6 +42,12 @@ ok(SC.side(V(), 18, 55, 3, 1, 16).lenGeo > SC.side(V(), 18, 55, 0, 1, 16).lenGeo
   const jb = SC.side(V({ spStyle: 'jbend' }), 18, 55, 3, 1, 16).lenGeo;
   const sp = SC.side(V({ spStyle: 'sp' }), 18, 55, 3, 1, 16).lenGeo;
   near(sp - jb, 2.6 / 2, 1e-9, 'straight-pull = J-bend + ½ hole');
+}
+// head clearance: 3-D gap grows with flange thickness (heads clear across the flange)
+{
+  const thin = SC.side(V({ ft: 1 }), 18, 55, 3, 1, 16).clr;
+  const thick = SC.side(V({ ft: 4 }), 18, 55, 3, 1, 16).clr;
+  ok(thick > thin, 'thicker flange -> more head clearance');
 }
 // asymmetric rim offset: +ro shifts the bed toward the right, lengthening the left spoke
 {

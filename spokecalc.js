@@ -60,7 +60,10 @@
     // We do NOT credit flange thickness — adjacent heads can foul across the flange.
     const phi = (360 / nf) * D2R;       // angular hole spacing on the flange
     const gapLine = tang * (Math.cos(phi) - 1) + Math.sqrt(Math.max(0, r * r - tang * tang)) * Math.sin(phi);
-    const clr = gapLine - (v.headD || 0) / 2 - (v.sg || 0) / 2;
+    // The crossing neighbour's head sits on the far face of the flange / recessed,
+    // so it's offset from the passing spoke axially by ~the flange thickness. The real
+    // gap is that 3-D distance, less the two radii.
+    const clr = Math.hypot(gapLine, v.ft || 0) - (v.headD || 0) / 2 - (v.sg || 0) / 2;
     return { R, r, theta, th, f, inPlane, lenGeo, len: lenGeo, brace, tang, exit, wrap, total, gapLine, clr, x, nf };
   }
 
